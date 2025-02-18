@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Videoloft Surveillance Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Font Awesome & Google Fonts -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Centralized Stylesheet -->
+    <link rel="stylesheet" href="/videoloft_panel/styles.css" />
+
+    <!-- Inline styles -->
+    <style>
+      .tab-section {
+        margin-top: 0;
+      }
+      .section-title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .info-icon {
+        font-size: 0.8em;
+        cursor: pointer;
+      }
+      /* Tooltip container */
+      .tooltip {
+        position: relative;
+        display: inline-block;
+      }
+      
+      .tooltip .tooltip-text {
+        visibility: hidden;
+        width: 180px;
+        background-color: #555;
+        color: #fff;
+        font-size: 0.75rem;
+        font-weight: normal;
+        text-align: left;
+        border-radius: 6px;
+        padding: 4px 8px;
+        position: absolute;
+        z-index: 1;
+        top: 125%;
+        left: 50%;
+        margin-left: -90px;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      
+      .tooltip .tooltip-text::after {
+        content: '';
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: transparent transparent #555 transparent;
+      }
+      /* Show tooltip text on hover */
+      .tooltip:hover .tooltip-text {
+        visibility: visible;
+        opacity: 1;
+      }
+      
+      .ai-search-container .api-key-actions,
+      .ai-search-container .button-group {
+        gap: 16px;
+      }
+      .ai-search-container .api-key-actions button,
+      .ai-search-container .button-group button {
+        margin: 4px;
+      }
+      @media (max-width: 480px) {
+        .ai-search-container .api-key-actions,
+        .ai-search-container .button-group {
+          flex-direction: column;
+          gap: 12px;
+        }
+        .ai-search-container .api-key-actions button,
+        .ai-search-container .button-group button {
+          width: 100%;
+          margin: 0;
+        }
+      }
+    </style>
+    <!--
+    -->
+  </head>
+  <body>
+    <!-- Top Navigation Bar -->
+    <header class="header" role="banner">
+      <nav class="top-nav">
+        <ul>
+          <li class="nav-item active" data-tab="live" title="Live Monitoring" tabindex="0">
+            <i class="fas fa-tv" aria-hidden="true"></i>
+            <span class="nav-text">Live</span>
+          </li>
+          <li class="nav-item" data-tab="lpr" title="License Plate Recognition" tabindex="0">
+            <i class="fas fa-car" aria-hidden="true"></i>
+            <span class="nav-text">LPR</span>
+          </li>
+          <li class="nav-item" data-tab="aiSearch" title="AI Search" tabindex="0">
+            <i class="fas fa-brain" aria-hidden="true"></i>
+            <span class="nav-text">AI Search</span>
+          </li>
+          <li class="nav-item" data-tab="dashboard" title="Dashboard Analytics" tabindex="0">
+            <i class="fas fa-chart-line" aria-hidden="true"></i>
+            <span class="nav-text">Dashboard</span>
+          </li>
+        </ul>
+      </nav>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-content" role="main">
+      <!-- Live Monitoring Tab -->
+      <section class="tab-section active" id="liveTab" aria-labelledby="liveTabLabel">
+        <div class="camera-grid" aria-live="polite">
+          <!-- Camera cards are dynamically injected by scripts.js.
+               In each camera card the .camera-header is hidden by default (see CSS)
+               and only becomes visible on hover. -->
+        </div>
+      </section>
+
+      <!-- AI Search Tab -->
+      <section class="tab-section" id="aiSearchTab" aria-labelledby="aiSearchTabLabel">
+        <h2 class="section-title" id="aiSearchTabLabel">
+          AI Search 
+          <span class="tooltip">
+            <i class="fas fa-info-circle info-icon" aria-hidden="true"></i>
+            <span class="tooltip-text">
+              AI Search uses OpenAI to analyze camera events so you can search using everyday language.
+              Uses GPT-4o, each event costs roughly $0.006 to $0.001. $0.06 per 10 events.
+            </span>
+          </span>
+        </h2>
+        <div class="ai-search-container">
+          <div class="api-key-management">
+            <h3><i class="fas fa-key"></i> OpenAI API Key Management</h3>
+            <input type="password" id="openaiApiKey" name="openaiApiKey" placeholder="Enter your OpenAI API Key" />
+            <div class="api-key-actions">
+              <button type="button" id="saveApiKeyButton" class="btn-primary">
+                <i class="fas fa-save"></i> Save Key
+              </button>
+              <button type="button" id="removeApiKeyButton" class="btn-secondary">
+                <i class="fas fa-trash-alt"></i> Remove Key
+              </button>
+            </div>
+            <div class="form-group camera-select">
+              <label for="aiCameraSelect"><i class="fas fa-video"></i> Select Camera</label>
+              <select id="aiCameraSelect" name="aiCameraSelect">
+                <option value="">Select Camera</option>
+              </select>
+            </div>
+            <div class="button-group">
+              <button type="button" id="runAISearchButton" class="btn-primary">
+                <i class="fas fa-play"></i> Run AI Search
+              </button>
+              <button type="button" id="clearDescriptionsBtn" class="btn-warning">
+                <i class="fas fa-trash-alt"></i> Clear Data
+              </button>
+            </div>
+          </div>
+          <div class="task-status" id="taskStatus"></div>
+          <div class="search-events-management">
+            <h3><i class="fas fa-search"></i> Search Events</h3>
+            <div class="search-input-group">
+              <input type="text" id="aiSearchInput" placeholder="Enter keywords (e.g., 'person with dog', 'delivery van')" aria-label="Search events" />
+              <button type="button" id="aiSearchButton" aria-label="Search">
+                <i class="fas fa-search"></i> Search
+              </button>
+            </div>
+            <div id="searchResults" class="search-results-container"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- LPR Tab -->
+      <section class="tab-section" id="lprTab" aria-labelledby="lprTabLabel">
+        <h2 class="section-title" id="lprTabLabel">
+          License Plate Recognition 
+          <span class="tooltip">
+            <i class="fas fa-info-circle info-icon" aria-hidden="true"></i>
+            <span class="tooltip-text">
+              The LPR system continuously monitors events to detect license plate data.
+              When a match is found based on your triggers, Home Assistant is updated for 45 seconds before resetting.
+            </span>
+          </span>
+        </h2>
+        <div class="lpr-container">
+          <div class="lpr-left-panel">
+            <div class="lpr-form-container mb-md">
+              <h3>Add New LPR Trigger</h3>
+              <form id="lprForm">
+                <div class="form-group mb-sm">
+                  <label for="licensePlate"><i class="fas fa-car"></i> License Plate</label>
+                  <input type="text" id="licensePlate" name="licensePlate" placeholder="Enter License Plate" />
+                </div>
+                <div class="form-group mb-sm">
+                  <label for="make"><i class="fas fa-car-side"></i> Make</label>
+                  <input type="text" id="make" name="make" placeholder="Enter Make" />
+                </div>
+                <div class="form-group mb-sm">
+                  <label for="model"><i class="fas fa-car-side"></i> Model</label>
+                  <input type="text" id="model" name="model" placeholder="Enter Model" />
+                </div>
+                <div class="form-group mb-sm">
+                  <label for="color"><i class="fas fa-palette"></i> Color</label>
+                  <input type="text" id="color" name="color" placeholder="Enter Vehicle Color" />
+                </div>
+                <div class="form-group mb-md">
+                  <label for="cameraSelect"><i class="fas fa-video"></i> Camera</label>
+                  <select id="cameraSelect" name="cameraSelect">
+                    <option value="">Select Camera</option>
+                  </select>
+                </div>
+                <div class="button-group">
+                  <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add Trigger
+                  </button>
+                </div>
+              </form>
+            </div>
+            <div class="lpr-triggers-list">
+              <h3>Active Triggers</h3>
+              <div class="triggers-container" id="lprTriggersList"></div>
+            </div>
+          </div>
+          <div class="lpr-right-panel">
+            <div class="log-header mb-sm">
+              <h3>LPR Processing Logs</h3>
+              <button type="button" id="clearLogs" class="btn btn-secondary" aria-label="Clear Logs">
+                <i class="fas fa-trash"></i> Clear
+              </button>
+            </div>
+            <div class="log-container" id="lprLogs"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Dashboard Tab -->
+      <section class="tab-section" id="dashboardTab" aria-labelledby="dashboardTabLabel">
+        <h2 class="section-title" id="dashboardTabLabel">Dashboard Analytics (Work In Progress)</h2>
+        <div id="dashboardGrid" class="dashboard-grid">
+          <!-- Cards for each camera will be injected here -->
+        </div>
+      </section>
+    </main>
+
+    <!-- External Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest" defer></script>
+    <script src="/videoloft_panel/scripts.js" defer></script>
+  </body>
+</html>

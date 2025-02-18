@@ -1,0 +1,13 @@
+{
+  "domain": "videoloft",
+  "name": "Videoloft",
+  "version": "1.0.0",
+  "documentation": "https://github.com/StannyByte/HomeAssistant-Videoloft",
+  "requirements": ["aiohttp>=3.7.4"],
+  "dependencies": ["http"],
+  "codeowners": ["@StannyByte"],
+  "config_flow": true,
+  "iot_class": "cloud_polling",
+  "logo": "logo.png"
+
+}
