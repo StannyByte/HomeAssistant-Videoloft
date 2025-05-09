@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from typing import List, Dict, Any, Optional
-import openai
+import asyncio
 import base64
 from datetime import datetime, timedelta
 import aiohttp
@@ -83,69 +83,124 @@ class VideoloftCoordinator:
                 return
 
     async def process_ai_search(self, selected_cameras: List[str]) -> None:
-        """Process events and get descriptions from OpenAI."""
-        api_key = self.hass.data[DOMAIN].get("openai_api_key")
+        """Process events and get descriptions from Google Gemini, with improved prompt, rate limiting, and daytime filtering."""
+        import pytz
+        api_key = self.hass.data[DOMAIN].get("gemini_api_key")
         if not api_key:
-            _LOGGER.error("OpenAI API key not set.")
+            _LOGGER.error("Google Gemini API key not set.")
             return
-            
-        openai.api_key = api_key
+
         descriptions = await self.async_load_descriptions()
         events_processed = 0
-        
+        RATE_LIMIT = 15  # Gemini allows 15/min for safety
+        WINDOW_SECONDS = 60
+        now = datetime.utcnow()
+        # Only process events from last 5 days, 6am-8pm local time
+        start_time = int((now - timedelta(days=5)).replace(hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000)
+        end_time = int(now.timestamp() * 1000)
+
+        # For rate limiting
+        call_times = []
+
+        # Use local timezone if available, else UTC
+        try:
+            local_tz = pytz.timezone(self.hass.config.time_zone)
+        except Exception:
+            local_tz = pytz.UTC
+
         for camera_uidd in selected_cameras:
             try:
                 logger_server = await self.api.get_logger_server(camera_uidd)
                 if not logger_server:
                     _LOGGER.error(f"Could not get logger server for camera {camera_uidd}")
                     continue
-                    
-                now = datetime.utcnow()
-                previous_day = now - timedelta(days=1)
-                start_time = int(previous_day.replace(hour=10, minute=0, second=0, microsecond=0).timestamp() * 1000)
-                end_time = int(previous_day.replace(hour=11, minute=0, second=0, microsecond=0).timestamp() * 1000)
-                
+
                 events = await self.api.get_recent_events_paginated(
                     logger_server, camera_uidd, start_time, end_time
                 )
-                
+
                 if not events:
                     _LOGGER.warning(f"No events found for camera {camera_uidd}")
                     continue
-                    
+
                 _LOGGER.info(f"Processing {len(events)} events for camera {camera_uidd}")
-                
+
+                # Filter and batch events
+                filtered_events = []
                 for event in events:
                     event_id = event.get("alert")
                     if not event_id or event_id in descriptions:
                         continue
-
-                    # Download thumbnail
-                    image_data = await self.api.download_event_thumbnail(
-                        logger_server, camera_uidd, event_id
-                    )
-                    
-                    if not image_data:
-                        _LOGGER.warning(f"No thumbnail available for event {event_id}")
+                    event_ts = event.get('startt')
+                    if not event_ts:
                         continue
+                    dt_utc = datetime.utcfromtimestamp(event_ts / 1000).replace(tzinfo=pytz.UTC)
+                    dt_local = dt_utc.astimezone(local_tz)
+                    if not (6 <= dt_local.hour < 20):
+                        continue
+                    filtered_events.append(event)
 
-                    # Get description from OpenAI
-                    description = await self.get_openai_description(image_data)
-                    if description:
-                        _LOGGER.debug(f"Description for event {event_id}: {description}")
-                        descriptions[event_id] = {
-                            'description': description,
-                            'uidd': camera_uidd,
-                            'logger_server': logger_server,
-                            'startt': event.get('startt')
-                        }
-                        events_processed += 1
+                # Process in batches of RATE_LIMIT (fetch 15, send 1 at a time, wait for all, then wait for the minute)
+                for i in range(0, len(filtered_events), RATE_LIMIT):
+                    batch = filtered_events[i:i+RATE_LIMIT]
+                    batch_start = datetime.utcnow()
+                    _LOGGER.info(f"Processing batch {i//RATE_LIMIT+1} ({len(batch)} events) for camera {camera_uidd}")
 
-                        # Save descriptions immediately after processing each event
-                        await self.async_save_descriptions(descriptions)
-                        _LOGGER.info(f"Saved description for event {event_id}")
-                    else:
-                        _LOGGER.warning(f"No description generated for event {event_id}")
+                    # Step 1: Fetch all thumbnails for the batch (sequentially, to avoid overloading the logger server)
+                    thumbnails = []
+                    for event in batch:
+                        event_id = event.get("alert")
+                        image_data = await self.api.download_event_thumbnail(
+                            logger_server, camera_uidd, event_id
+                        )
+                        thumbnails.append((event, event_id, image_data))
+
+                    # Step 2: For each event, send Gemini API call (sequentially, but gather all tasks)
+                    async def gemini_task(event, event_id, image_data):
+                        if not image_data:
+                            _LOGGER.warning(f"No thumbnail available for event {event_id}")
+                            return event, event_id, None
+                        description = await self.get_gemini_description(image_data, api_key)
+                        # Remove unwanted leading phrase if present (robust, trims any variant)
+                        if description:
+                            desc = description.strip()
+                            # Remove all known variants and extra whitespace/colons
+                            for prefix in [
+                                "here's a description of the surveillance image:",
+                                "here is a description of the surveillance image:",
+                                "description of the surveillance image:",
+                                "here's a description of the surveillance image",
+                                "here is a description of the surveillance image",
+                                "description of the surveillance image"
+                            ]:
+                                if desc.lower().startswith(prefix):
+                                    desc = desc[len(prefix):].lstrip(' .:').strip()
+                            description = desc
+                        return event, event_id, description
+
+                    gemini_tasks = [gemini_task(event, event_id, image_data) for event, event_id, image_data in thumbnails]
+                    results = await asyncio.gather(*gemini_tasks)
+                    for event, event_id, description in results:
+                        if event_id and description:
+                            _LOGGER.debug(f"Description for event {event_id}: {description}")
+                            descriptions[event_id] = {
+                                'description': description,
+                                'uidd': camera_uidd,
+                                'logger_server': logger_server,
+                                'startt': event.get('startt')
+                            }
+                            events_processed += 1
+                            await self.async_save_descriptions(descriptions)
+                            _LOGGER.info(f"Saved description for event {event_id}")
+                        elif event_id:
+                            _LOGGER.warning(f"No description generated for event {event_id}")
+
+                    # Wait for the remainder of the minute if needed
+                    batch_elapsed = (datetime.utcnow() - batch_start).total_seconds()
+                    if batch_elapsed < WINDOW_SECONDS and i + RATE_LIMIT < len(filtered_events):
+                        sleep_time = WINDOW_SECONDS - batch_elapsed + 0.1
+                        _LOGGER.info(f"Batch complete, sleeping {sleep_time:.1f}s to respect Gemini rate limit")
+                        await asyncio.sleep(sleep_time)
 
             except Exception as e:
                 _LOGGER.exception(f"Error processing events for camera {camera_uidd}: {str(e)}")
@@ -153,89 +208,54 @@ class VideoloftCoordinator:
 
         _LOGGER.info(f"Processed {events_processed} new events.")
 
-    async def get_openai_description(self, image_bytes: bytes) -> Optional[str]:
-        """Get a detailed, searchable description focusing on identifiable elements."""
+    async def get_gemini_description(self, image_bytes: bytes, api_key: str) -> Optional[str]:
+        """Get a clean, simple, but highly descriptive VMS event summary using Google Gemini Flash-2.0-lite."""
         try:
             base64_image = base64.b64encode(image_bytes).decode('utf-8')
             prompt = (
-                "Create a concise, searchable description, focusing solely on visible and relevant elements. "
-                "Exclude unnecessary details such as 'there is no person' or generic observations like 'the sky is blue.' "
-                "Provide a clear paragraph that captures only specific, identifiable, and searchable features. Focus on:\n\n"
-                
-                "1. **Vehicles**:\n"
-                "- Mention the exact make, model, and color of any visible vehicles (e.g., 'black BMW 3-Series').\n"
-                "- Include license plate numbers if they are clearly visible.\n"
-                "- Identify any commercial or delivery vehicles with visible branding or logos (e.g., 'white DPD van with logo on side').\n"
-                "- Specify the total count of vehicles and note positions only if they add relevance (e.g., 'parked near entrance').\n\n"
-                
-                "2. **People** (if present):\n"
-                "- Note the number of people and provide distinctive descriptions.\n"
-                "- Describe clothing colors, patterns, or unique items (e.g., 'red jacket with hood').\n"
-                "- Mention any visible uniforms or branding on clothing (e.g., 'Royal Mail jacket').\n"
-                "- Include observed actions (e.g., 'delivering package,' 'walking westbound').\n"
-                "- Indicate direction of movement (e.g., 'walking north').\n\n"
-                
-                "3. **Contextual Details**:\n"
-                "- Describe any visible packages, deliveries, or carried items (e.g., 'brown parcel').\n"
-                "- Include notable objects or scene elements only if they contribute relevant context (e.g., 'yellow bicycle parked near mailbox').\n"
-                "- Mention lighting conditions (e.g., 'daylight' or 'night') if they impact scene clarity.\n\n"
-                
-                "4. **Branding and Identifiable Features**:\n"
-                "- Highlight any recognizable brand logos or markings on vehicles, uniforms, or packages, as these are essential for searchability (e.g., 'DPD logo on van,' 'Royal Mail uniform').\n\n"
-                
-                "Format the description as a single, clear paragraph, focusing on elements that are present, identifiable, and enhance searchability. "
-                "Avoid extraneous details and redundant observations.\n\n"
-                
-                "Example: 'Five vehicles are visible: a white Ford Transit DPD van (plate AB12 CDE) with a DPD logo on the side, a red Tesla Model 3, a blue Toyota Prius, a dark gray BMW X5 with a small dent on the rear bumper, and a yellow DHL delivery truck parked along the curb. "
-                "Three individuals are present: one person in a high-vis yellow jacket with a Royal Mail logo, holding a brown package, standing by the entrance and facing north; a second person wearing a dark blue coat with a hood and a red scarf, walking westbound while holding a black umbrella; and a third person in a green jacket and jeans, leaning against the blue Toyota Prius and appearing to be looking at a smartphone. "
-                "Scene occurs in daylight with mild cloud cover. Nearby, a yellow bicycle is parked near a green mailbox on the left side of the frame, and a small red shopping cart is positioned close to the DHL truck. The background includes a visible lamppost and a row of bushes along the sidewalk. No other pedestrians are visible.'"
+                "Describe the surveillance image for a video management system operator. "
+                "Be clear, specific, and concise. Include:\n"
+                "- Number of vehicles, make, model, color, and any visible branding (e.g., DPD, DHL, Amazon).\n"
+                "- Number of people, gender (if clear), clothing colors, accessories (e.g., hats, bags), and what each person is doing.\n"
+                "- Any visible actions (e.g., walking, running, carrying, talking, delivering, entering vehicle).\n"
+                "- Any notable objects (e.g., packages, bicycles, animals) and their location.\n"
+                "- The general scene (e.g., street, parking lot, warehouse, office).\n"
+                "- Lighting conditions (e.g., daylight, night, artificial light).\n"
+                "Use full sentences. Do not guess or invent details. Do not start your response with any generic phrase. DO NOT SAY Here's a description of the surveillance image:\n"
+                "Example: 'A white DPD van with a DPD logo is parked on the left. Two people are present: a woman in a red jacket is walking toward the van carrying a brown package, and a man in a blue hoodie stands near a blue car. The scene is a parking lot in daylight.'"
             )
 
-            payload = {
-                "model": "gpt-4o",
-                "messages": [
+            url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent"
+            headers = {"Content-Type": "application/json"}
+            data = {
+                "contents": [
                     {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": prompt},
-                            {
-                                "type": "image_url",
-                                "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}
-                            }
+                        "parts": [
+                            {"inline_data": {"mime_type": "image/jpeg", "data": base64_image}},
+                            {"text": prompt}
                         ]
                     }
-                ],
-                "max_tokens": 700,
+                ]
             }
-    
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {openai.api_key}"
-            }
-    
+
             async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    "https://api.openai.com/v1/chat/completions",
-                    headers=headers,
-                    json=payload
-                ) as response:
+                async with session.post(f"{url}?key={api_key}", headers=headers, json=data) as response:
                     if response.status == 200:
                         result = await response.json()
-                        description = result['choices'][0]['message']['content']
-                        _LOGGER.debug(f"OpenAI response for image: {description}")
+                        description = result["candidates"][0]["content"]["parts"][0]["text"]
+                        _LOGGER.debug(f"Gemini response for image: {description}")
                         return description
                     else:
                         error_text = await response.text()
-                        _LOGGER.error(f"OpenAI API error: {response.status} - {error_text}")
+                        _LOGGER.error(f"Gemini API error: {response.status} - {error_text}")
                         return None
-    
         except Exception as e:
-            _LOGGER.error(f"Error in get_openai_description: {e}")
+            _LOGGER.error(f"Error in get_gemini_description: {e}")
             return None
 
     async def async_load_descriptions(self) -> Dict[str, Any]:
         """Load stored descriptions from Home Assistant storage."""
-        store = self.hass.helpers.storage.Store(1, f"{DOMAIN}_descriptions")
+        store = storage.Store(self.hass, 1, f"{DOMAIN}_descriptions")
         try:
             data = await store.async_load()
             return data if data is not None else {}
@@ -245,7 +265,7 @@ class VideoloftCoordinator:
 
     async def async_save_descriptions(self, descriptions: Dict[str, Any]) -> None:
         """Save descriptions to Home Assistant storage."""
-        store = self.hass.helpers.storage.Store(1, f"{DOMAIN}_descriptions")
+        store = storage.Store(self.hass, 1, f"{DOMAIN}_descriptions")
         try:
             await store.async_save(descriptions)
         except Exception as e:

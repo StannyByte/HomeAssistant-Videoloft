@@ -316,6 +316,20 @@ class VideoloftAPI:
         if self.connector and not self.connector.closed:
             await self.connector.close()
 
+    async def get_lpr_event_thumbnail(self, owner_uid: str, device_id: str, event_ts: str, unique_id: str) -> Optional[bytes]:
+        try:
+            token = await self.get_token()
+            video_server = f"{self.region}-video.manything.com"
+            url = f"https://{video_server}/images/lpr/{owner_uid}/{device_id}/{event_ts}/{unique_id}?token={token}"
+            headers = {"Authorization": f"ManythingToken {token}"}
+            _LOGGER.debug("Fetching LPR thumbnail from URL: %s", url)
+            async with self.session.get(url, headers=headers, timeout=10) as response:
+                response.raise_for_status()
+                return await response.read()
+        except Exception as e:
+            _LOGGER.error("Error fetching LPR thumbnail for event %s: %s", unique_id, e)
+            return None
+
     async def get_recent_events_paginated(self, logger_server: str, uidd: str, start_time: int, end_time: int) -> List[Dict[str, Any]]:
         """Fetch recent events in paginated manner."""
         all_events = []

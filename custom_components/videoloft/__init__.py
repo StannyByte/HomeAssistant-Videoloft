@@ -20,7 +20,7 @@ from .views import (
     EventThumbnailView,
     LPRTriggersView,
     LPRLogsWebSocket,
-    OpenAIKeyView,
+    GeminiKeyView,
     ProcessEventsView,
     SearchEventsView,
     AISearchProcessView,
@@ -65,7 +65,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.http.register_view(EventThumbnailView(hass))
         hass.http.register_view(LPRTriggersView(hass))
         hass.http.register_view(LPRLogsWebSocket(hass))
-        hass.http.register_view(OpenAIKeyView(hass))
+        hass.http.register_view(GeminiKeyView(hass))
         hass.http.register_view(ProcessEventsView(hass))
         hass.http.register_view(SearchEventsView(hass))
         hass.http.register_view(AISearchProcessView(hass))
@@ -85,14 +85,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
 
         # Register the side panel
-        hass.components.frontend.async_register_built_in_panel(
-            component_name="iframe",
-            sidebar_title="Videoloft",
-            sidebar_icon="mdi:cctv",
-            frontend_url_path="videoloft_panel",
-            config={"url": "/videoloft_panel/videoloft_cams.html"},
-            require_admin=False,
-        )
+        if hasattr(hass, "components") and hasattr(hass.components, "frontend"):
+            hass.components.frontend.async_register_built_in_panel(
+                component_name="iframe",
+                sidebar_title="Videoloft",
+                sidebar_icon="mdi:cctv",
+                frontend_url_path="videoloft_panel",
+                config={"url": "/videoloft_panel/videoloft_cams.html"},
+                require_admin=False,
+            )
+        else:
+            async_register_built_in_panel(
+                hass,
+                component_name="iframe",
+                sidebar_title="Videoloft",
+                sidebar_icon="mdi:cctv",
+                frontend_url_path="videoloft_panel",
+                config={"url": "/videoloft_panel/videoloft_cams.html"},
+                require_admin=False,
+            )
 
         # Forward the setup to the defined platforms (camera and sensor)
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -118,6 +129,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Unload platforms
         unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
+
         if unload_ok:
             # Properly close the API session
             api = hass.data[DOMAIN][entry.entry_id].get("api")
@@ -127,8 +139,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             # Clean up entry data
             hass.data[DOMAIN].pop(entry.entry_id)
 
-            # Remove frontend panel
-            hass.components.frontend.async_remove_panel("videoloft_panel")
+            # Remove frontend panel (handle potential attribute errors)
+            if hasattr(hass, "components") and hasattr(hass.components, "frontend"):
+                hass.components.frontend.async_remove_panel("videoloft_panel")
 
         return unload_ok
 

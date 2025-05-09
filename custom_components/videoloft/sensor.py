@@ -201,9 +201,9 @@ class LPRUpdateCoordinator(DataUpdateCoordinator):
                     self.hass.data[DOMAIN][self.entry.entry_id]["processed_event_ids"] = processed_event_ids
                     self.hass.data[DOMAIN][self.entry.entry_id]["last_event_time"] = event_start_time
 
-                    # Poll the most recent event continuously for up to 60 seconds for LPR data
-                    _LOGGER.info(f"New event {event_id} detected. Polling for LPR data every 5 seconds (timeout: 60s). 🚀")
-                    max_wait = 60  # seconds
+                    # Poll the most recent event continuously for up to 90 seconds for LPR data
+                    _LOGGER.info(f"New event {event_id} detected. Polling for LPR data every 5 seconds (timeout: 90s). 🚀")
+                    max_wait = 90  # seconds
                     poll_interval = 5  # seconds between checks
                     lpr_event_data = None
                     start_poll = datetime.now().timestamp()  # record polling start time
@@ -215,7 +215,7 @@ class LPRUpdateCoordinator(DataUpdateCoordinator):
                         _LOGGER.debug(f"No LPR data yet for event {event_id}. Retrying in {poll_interval} seconds.")
                         await asyncio.sleep(poll_interval)
                     if not lpr_event_data:
-                        _LOGGER.info(f"No LPR data found for event {event_id} after 60 seconds. Backing off. ⏱️")
+                        _LOGGER.info(f"No LPR data found for event {event_id} after 90 seconds. Backing off. ⏱️")
                         continue  # Skip further processing of this event
 
                     if not isinstance(lpr_event_data, list) or len(lpr_event_data) == 0:
@@ -245,7 +245,6 @@ class LPRUpdateCoordinator(DataUpdateCoordinator):
                                 make_trigger = normalize(trigger.get("make", ""))
                                 model_trigger = normalize(trigger.get("model", ""))
                                 color_trigger = normalize(trigger.get("color", ""))
-
                                 if make_trigger and model_trigger and color_trigger:
                                     if (make_trigger == normalize(vehicle_data.get("make", "")) and
                                         model_trigger == normalize(vehicle_data.get("model", "")) and
@@ -253,6 +252,7 @@ class LPRUpdateCoordinator(DataUpdateCoordinator):
                                         matches = True
 
                             if matches:
+                                # Store the matched event details
                                 self.matched_event = {
                                     "license_plate": vehicle_data.get("license_plate", ""),
                                     "make": vehicle_data.get("make", ""),
@@ -265,15 +265,25 @@ class LPRUpdateCoordinator(DataUpdateCoordinator):
                                 self.async_set_updated_data(self.matched_event)
                                 _LOGGER.info(f"Match found with trigger: {trigger}")
 
-                                # Cancel any existing clear task
+                                # Fetch and save the LPR event thumbnail using the same method as AI search
+                                event_id = str(vehicle_data.get("alertid"))
+                                thumbnail_image = await api.download_event_thumbnail(logger_server, uidd, event_id)
+                                if thumbnail_image:
+                                    thumbnail_filename = "/config/www/lpr.jpg"
+                                    with open(thumbnail_filename, "wb") as f:
+                                        f.write(thumbnail_image)
+                                    _LOGGER.info(f"LPR event thumbnail saved to {thumbnail_filename}")
+                                    self.matched_event["lpr_thumbnail_path"] = thumbnail_filename
+                                else:
+                                    _LOGGER.error(f"Failed to fetch LPR event thumbnail for event {event_id}")
+
+                                # Cancel any existing clear task and schedule clearing of the matched event state
                                 if self._clear_task and not self._clear_task.done():
                                     self._clear_task.cancel()
                                     try:
                                         await self._clear_task
                                     except asyncio.CancelledError:
                                         pass  # Expected when canceling
-
-                                # Schedule a new clear task
                                 self._clear_task = self.hass.loop.create_task(self.clear_matched_event(delay=10))
                                 break  # Exit trigger loop after match
 

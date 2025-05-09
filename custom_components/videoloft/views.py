@@ -422,18 +422,18 @@ class LPRLogsWebSocket(HomeAssistantView):
 
         return ws
 
-class OpenAIKeyView(HomeAssistantView):
-    """Handle OpenAI API key management."""
+class GeminiKeyView(HomeAssistantView):
+    """Handle Google Gemini API key management."""
 
-    url = "/api/videoloft/openai_key"
-    name = "api:videoloft:openai_key"
+    url = "/api/videoloft/gemini_key"
+    name = "api:videoloft:gemini_key"
     requires_auth = False
 
     def __init__(self, hass: HomeAssistant):
         self.hass = hass
 
     async def post(self, request: web.Request) -> web.Response:
-        """Handle POST request to save OpenAI API key."""
+        """Handle POST request to save Gemini API key."""
         try:
             data = await request.json()
             api_key = data.get("api_key")
@@ -442,33 +442,33 @@ class OpenAIKeyView(HomeAssistantView):
                 return web.json_response({"error": "API key is required."}, status=400)
 
             # Securely save the API key
-            self.hass.data[DOMAIN]["openai_api_key"] = api_key
-            _LOGGER.info("OpenAI API key saved successfully.")
+            self.hass.data[DOMAIN]["gemini_api_key"] = api_key
+            _LOGGER.info("Gemini API key saved successfully.")
             return web.json_response({"success": True}, status=201)
         except json.JSONDecodeError:
-            _LOGGER.error("Invalid JSON format in OpenAI API key POST request.")
+            _LOGGER.error("Invalid JSON format in Gemini API key POST request.")
             return web.json_response({"error": "Invalid JSON format."}, status=400)
         except Exception as e:
-            _LOGGER.error("Error saving OpenAI API key: %s", e)
+            _LOGGER.error("Error saving Gemini API key: %s", e)
             return web.json_response({"error": str(e)}, status=500)
 
     async def delete(self, request: web.Request) -> web.Response:
-        """Handle DELETE request to remove OpenAI API key."""
+        """Handle DELETE request to remove Gemini API key."""
         try:
-            self.hass.data[DOMAIN]["openai_api_key"] = None
-            _LOGGER.info("OpenAI API key removed successfully.")
+            self.hass.data[DOMAIN]["gemini_api_key"] = None
+            _LOGGER.info("Gemini API key removed successfully.")
             return web.json_response({"success": True}, status=200)
         except Exception as e:
-            _LOGGER.error("Error removing OpenAI API key: %s", e)
+            _LOGGER.error("Error removing Gemini API key: %s", e)
             return web.json_response({"error": str(e)}, status=500)
 
     async def get(self, request: web.Request) -> web.Response:
-        """Handle GET request to check if OpenAI API key exists."""
+        """Handle GET request to check if Gemini API key exists."""
         try:
-            has_key = bool(self.hass.data[DOMAIN].get("openai_api_key"))
+            has_key = bool(self.hass.data[DOMAIN].get("gemini_api_key"))
             return web.json_response({"has_key": has_key}, status=200)
         except Exception as e:
-            _LOGGER.error("Error checking OpenAI API key: %s", e)
+            _LOGGER.error("Error checking Gemini API key: %s", e)
             return web.json_response({"error": str(e)}, status=500)
 
 
