@@ -15,12 +15,17 @@
 - **Live HLS Streaming** – Watch your cameras in real time, right from Home Assistant.
 - **License Plate Recognition (LPR) Automation** – Trigger automations when specific vehicles are detected.
 - **AI-Powered Event Search** – Use Google Gemini to generate smart, searchable event descriptions.
+---
+
 <p align="left">
   <img src="https://github.com/user-attachments/assets/f22512e9-c72b-448c-b6ed-1a6a5aa89182" alt="Videoloft Live Stream" width="200">
   <img src="https://github.com/user-attachments/assets/c9e56adb-4491-4eef-abc9-4c7a45fe463c" alt="AI Search Interface" width="200">
   <img src="https://github.com/user-attachments/assets/a4912f1e-160f-4e88-b086-743d9dd56eed" alt="Dashboard Overview" width="200">
   <img src="https://github.com/user-attachments/assets/bda51a1c-84cd-482c-828d-87cb0d2e54be" alt="Event Analytics" width="186">
 </p>
+
+---
+
 ## ✨ Features
 
 - **📺 Live Streaming:**  
