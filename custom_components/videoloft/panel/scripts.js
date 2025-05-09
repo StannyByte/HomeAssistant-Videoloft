@@ -756,7 +756,7 @@
    * ================================ */
   class AIManager {
     constructor() {
-      this.openaiApiKeyInput = $("openaiApiKey");
+      this.geminiApiKeyInput = $("geminiApiKey");
       this.saveApiKeyButton = $("saveApiKeyButton");
       this.removeApiKeyButton = $("removeApiKeyButton");
       this.runAISearchButton = $("runAISearchButton");
@@ -781,20 +781,20 @@
 
     async checkApiKey() {
       try {
-        const response = await fetch("/api/videoloft/openai_key");
+        const response = await fetch("/api/videoloft/gemini_key");
         const data = await response.json();
         if (data.has_key) {
-          this.openaiApiKeyInput.value = "********";
-          this.openaiApiKeyInput.disabled = true;
+          this.geminiApiKeyInput.value = "********";
+          this.geminiApiKeyInput.disabled = true;
           this.saveApiKeyButton.disabled = true;
           this.removeApiKeyButton.disabled = false;
-          console.log("OpenAI API key loaded");
+          console.log("Gemini API key loaded");
         } else {
-          this.openaiApiKeyInput.value = "";
-          this.openaiApiKeyInput.disabled = false;
+          this.geminiApiKeyInput.value = "";
+          this.geminiApiKeyInput.disabled = false;
           this.saveApiKeyButton.disabled = false;
           this.removeApiKeyButton.disabled = true;
-          console.log("No OpenAI API key found");
+          console.log("No Gemini API key found");
         }
       } catch (error) {
         console.error("Error checking API key:", error);
@@ -803,13 +803,13 @@
 
     setupApiKeyHandlers() {
       this.saveApiKeyButton.addEventListener("click", async () => {
-        const apiKey = this.openaiApiKeyInput.value.trim();
+        const apiKey = this.geminiApiKeyInput.value.trim();
         if (!apiKey) {
           alert("Please enter an API key.");
           return;
         }
         try {
-          const response = await fetch("/api/videoloft/openai_key", {
+          const response = await fetch("/api/videoloft/gemini_key", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ api_key: apiKey }),
@@ -817,11 +817,11 @@
           const data = await response.json();
           if (response.ok) {
             alert("API key saved successfully.");
-            this.openaiApiKeyInput.value = "********";
-            this.openaiApiKeyInput.disabled = true;
+            this.geminiApiKeyInput.value = "********";
+            this.geminiApiKeyInput.disabled = true;
             this.saveApiKeyButton.disabled = true;
             this.removeApiKeyButton.disabled = false;
-            console.log("OpenAI API key saved successfully");
+            console.log("Gemini API key saved successfully");
           } else {
             alert("Error saving API key: " + data.error);
             console.error(`Error saving API key: ${data.error}`);
@@ -833,15 +833,15 @@
 
       this.removeApiKeyButton.addEventListener("click", async () => {
         try {
-          const response = await fetch("/api/videoloft/openai_key", { method: "DELETE" });
+          const response = await fetch("/api/videoloft/gemini_key", { method: "DELETE" });
           const data = await response.json();
           if (response.ok) {
             alert("API key removed successfully.");
-            this.openaiApiKeyInput.value = "";
-            this.openaiApiKeyInput.disabled = false;
+            this.geminiApiKeyInput.value = "";
+            this.geminiApiKeyInput.disabled = false;
             this.saveApiKeyButton.disabled = false;
             this.removeApiKeyButton.disabled = true;
-            console.log("OpenAI API key removed successfully");
+            console.log("Gemini API key removed successfully");
           } else {
             alert("Error removing API key: " + data.error);
             console.error(`Error removing API key: ${data.error}`);
