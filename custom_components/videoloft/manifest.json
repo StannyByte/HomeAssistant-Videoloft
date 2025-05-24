@@ -1,7 +1,7 @@
 {
   "domain": "videoloft",
   "name": "Videoloft",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "documentation": "https://github.com/StannyByte/HomeAssistant-Videoloft",
   "requirements": ["aiohttp>=3.7.4"],
   "dependencies": ["http"],
