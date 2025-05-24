@@ -74,8 +74,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Register static paths for all HTML, CSS, and JS files
         static_files = [
             "videoloft_cams.html",
-            "styles.css",
-            "scripts.js"
         ]
         for file in static_files:
             hass.http.register_static_path(
@@ -83,6 +81,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 hass.config.path(f"custom_components/videoloft/panel/{file}"),
                 cache_headers=False,
             )
+
+        # Register the CSS directory
+        hass.http.register_static_path(
+            "/videoloft_panel/css",
+            hass.config.path("custom_components/videoloft/panel/css"),
+            cache_headers=False,
+        )
+
+        # Register the JS directory
+        hass.http.register_static_path(
+            "/videoloft_panel/js",
+            hass.config.path("custom_components/videoloft/panel/js"),
+            cache_headers=False,
+        )
 
         # Register the side panel
         if hasattr(hass, "components") and hasattr(hass.components, "frontend"):

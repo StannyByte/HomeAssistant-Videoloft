@@ -241,6 +241,7 @@ class LPRTriggersView(HomeAssistantView):
                 return web.json_response({"error": "At least one attribute (license_plate, make, model, or color) is required."}, status=400)
 
             device_data = get_device_data(self.hass, uidd)
+
             if not device_data:
                 return web.json_response({"error": "Specified camera does not exist."}, status=400)
 
@@ -254,6 +255,8 @@ class LPRTriggersView(HomeAssistantView):
             }
 
             triggers = await coordinator.async_load_triggers()
+            if not isinstance(triggers, list):
+                triggers = []
             triggers.append(new_trigger)
             await coordinator.async_save_triggers(triggers)
 
