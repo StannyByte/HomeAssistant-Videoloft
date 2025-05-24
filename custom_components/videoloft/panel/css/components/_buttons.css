@@ -1,0 +1,213 @@
+/* ===============================
+   PREMIUM BUTTON SYSTEM
+   =============================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  text-decoration: none;
+  background: var(--ha-bg-elevated);
+  color: var(--text-primary);
+  min-height: 40px;
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  pointer-events: none;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--purple-muted), transparent);
+  opacity: 0;
+  transition: opacity var(--transition-base);
+  border-radius: inherit;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--border-accent);
+}
+
+.btn:hover::before {
+  opacity: 1;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+  transition: transform 0.1s;
+}
+
+/* Primary Button */
+.btn-primary {
+  background: linear-gradient(135deg, var(--purple-primary) 0%, var(--purple-secondary) 100%);
+  border-color: var(--purple-accent);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(72, 61, 139, 0.3);
+}
+
+.btn-primary::before {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--purple-secondary) 0%, var(--purple-light) 100%);
+  box-shadow: 0 6px 20px rgba(72, 61, 139, 0.4);
+  transform: translateY(-2px);
+}
+
+/* Secondary Button */
+.btn-secondary {
+  background: var(--ha-bg-elevated);
+  color: var(--text-secondary);
+  border-color: var(--border-primary);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--ha-bg-overlay);
+  color: var(--text-primary);
+  border-color: var(--border-accent);
+}
+
+/* Warning Button */
+.btn-warning {
+  background: linear-gradient(135deg, var(--accent-warning) 0%, #f97316 100%);
+  color: white;
+  border-color: var(--accent-warning);
+  font-weight: 600;
+}
+
+.btn-warning:hover:not(:disabled) {
+  box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.3);
+}
+
+/* Success Button */
+.btn-success {
+  background: linear-gradient(135deg, var(--accent-success) 0%, #059669 100%);
+  color: white;
+  border-color: var(--accent-success);
+  font-weight: 600;
+}
+
+.btn-success:hover:not(:disabled) {
+  box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.3);
+}
+
+/* Error Button */
+.btn-error {
+  background: linear-gradient(135deg, var(--accent-error) 0%, #dc2626 100%);
+  color: white;
+  border-color: var(--accent-error);
+  font-weight: 600;
+}
+
+.btn-error:hover:not(:disabled) {
+  box-shadow: 0 10px 25px -5px rgba(239, 68, 68, 0.3);
+}
+
+/* Button Sizes */
+.btn-sm {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-xs);
+  min-height: 32px;
+  gap: var(--space-1-5);
+}
+
+.btn-lg {
+  padding: var(--space-4) var(--space-7);
+  font-size: var(--text-base);
+  min-height: 48px;
+  gap: var(--space-3);
+  font-weight: 600;
+}
+
+.btn-xl {
+  padding: var(--space-5) var(--space-8);
+  font-size: var(--text-lg);
+  min-height: 56px;
+  gap: var(--space-4);
+  font-weight: 600;
+}
+
+/* Icon Only Buttons */
+.btn-icon {
+  padding: var(--space-3);
+  aspect-ratio: 1;
+  min-width: 40px;
+}
+
+.btn-icon.btn-sm {
+  padding: var(--space-2);
+  min-width: 32px;
+}
+
+.btn-icon.btn-lg {
+  padding: var(--space-4);
+  min-width: 48px;
+}
+
+/* Button Groups */
+.button-group {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.button-group .btn {
+  flex: 1;
+  min-width: max-content;
+}
+
+/* Full width button utility */
+.btn-full-width {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Loading State */
+.btn-loading {
+  position: relative;
+  color: transparent !important;
+}
+
+.btn-loading::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: inherit;
+}
+
+@keyframes spin {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+} 

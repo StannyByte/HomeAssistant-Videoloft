@@ -1,0 +1,266 @@
+/* ===============================
+   RESPONSIVE BREAKPOINTS
+   =============================== */
+
+@media (max-width: 1400px) {
+  .content-card {
+    margin: var(--space-4);
+    padding: var(--space-6);
+  }
+
+  .camera-grid {
+    height: calc(100vh - 140px);
+    gap: var(--space-2);
+  }
+}
+
+@media (max-width: 1200px) {
+  .lpr-container {
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+
+  .search-results-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+
+  .lpr-left-panel,
+  .lpr-right-panel {
+    height: auto;
+    min-height: auto;
+    /* gap and width are inherited */
+  }
+
+  .lpr-form-container,
+  .log-header { /* .log-header already has flex: none */
+    flex: none; /* Ensures lpr-form-container also respects this */
+    min-height: auto;
+  }
+
+  .lpr-triggers-list,
+  .log-container {
+    flex: 1; /* Allow them to grow and fill space */
+    min-height: 300px; /* Ensure a minimum scrollable area */
+    height: auto; /* Override fixed heights */
+    max-height: none; /* Remove max-height limits */
+    /* overflow-y: auto; is inherited from base consolidation */
+  }
+
+  .triggers-container { /* This is inside .lpr-triggers-list */
+    height: auto; /* Content dictates height */
+    flex: none; /* Not a flex item in this context usually */
+    overflow-y: visible; /* Parent .lpr-triggers-list handles scrolling */
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    height: 64px;
+  }
+
+  .top-nav .nav-item {
+    min-width: auto;
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .nav-text {
+    display: none;
+  }
+
+  .top-nav .nav-item i {
+    font-size: var(--text-xl);
+  }
+
+  .main-content {
+    padding: 0;
+    margin-top: 64px;
+  }
+
+  .content-card {
+    padding: 0;
+    border-radius: var(--radius-lg);
+    margin: var(--space-1) auto;
+  }
+
+  #other-tabs-wrapper .tab-section.active {
+    padding: var(--space-4);
+  }
+
+  .button-group {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .button-group .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .search-input-group {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .search-input-group input {
+    border-radius: var(--radius-lg);
+    border-right: 1px solid var(--border-primary);
+  }
+
+  .search-input-group button {
+    border-radius: var(--radius-lg);
+  }
+
+  .api-key-actions {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .api-key-management,
+  .search-events-management {
+    padding: var(--space-6);
+    border-radius: var(--radius-xl);
+  }
+
+  .ai-search-container .api-key-actions,
+  .ai-search-container .button-group {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .ai-search-container .api-key-actions button,
+  .ai-search-container .button-group button {
+    width: 100%;
+  }
+
+  .search-results-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+
+  .modal-content {
+    min-width: auto;
+    margin: var(--space-4);
+    padding: var(--space-6);
+  }
+
+  .modal-actions {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .modal-actions button {
+    width: 100%;
+  }
+
+  .camera-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    gap: 4px !important;
+    grid-template-columns: unset !important;
+    grid-template-rows: unset !important;
+    overflow: visible !important;
+    max-height: none !important;
+    scrollbar-width: auto;
+    -ms-overflow-style: auto;
+  }
+
+  .camera-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .camera-card {
+    width: 100% !important;
+    aspect-ratio: 16/9;
+    min-height: 0;
+    max-height: none;
+    margin-bottom: 4px;
+    grid-column: auto !important;
+    grid-row: auto !important;
+  }
+
+  .camera-card-span-2,
+  .camera-card-span-3 { /* Assuming span-3 might exist or for consistency */
+    grid-column: span 1 !important;
+    width: 100% !important;
+  }
+
+  .camera-header {
+    padding: var(--space-3);
+    opacity: 0;
+    transition: opacity var(--transition-base);
+    background: linear-gradient(180deg, rgba(10, 10, 11, 0.95) 0%, transparent 100%);
+  }
+
+  .camera-card:hover .camera-header {
+    opacity: 1;
+  }
+
+  .camera-info {
+    font-size: var(--text-xs);
+  }
+
+  .fullscreen-button {
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all var(--transition-base);
+    top: var(--space-3);
+    right: var(--space-3);
+    padding: var(--space-2);
+  }
+
+  .video-container:hover .fullscreen-button {
+     opacity: 1;
+     transform: translateY(0);
+  }
+
+  #liveTab.live-backdrop {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .lpr-container { /* Already defined in 1200px, but ensure it's here if needed */
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .top-nav .nav-item {
+    padding: var(--space-3);
+    min-width: auto;
+  }
+
+  .top-nav .nav-text {
+    display: none;
+  }
+
+  .content-card {
+    margin: var(--space-1);
+    padding: var(--space-3);
+  }
+
+  .section-title {
+    font-size: var(--text-lg);
+  }
+
+  .api-key-management,
+  .search-events-management {
+    padding: var(--space-4);
+  }
+}
+
+@media (min-width: 1400px) {
+  .search-results-grid {
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  }
+} 

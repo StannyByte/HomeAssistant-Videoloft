@@ -1,0 +1,197 @@
+/* ===============================
+   PREMIUM FORM COMPONENTS
+   =============================== */
+
+.form-group {
+  margin-bottom: var(--space-6);
+  position: relative;
+}
+
+.form-group label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: var(--text-sm);
+  letter-spacing: -0.01em;
+}
+
+.form-group label i {
+  color: var(--accent-primary);
+  font-size: var(--text-base);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--ha-bg-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-family: inherit;
+  transition: all var(--transition-base);
+  min-height: 44px;
+  appearance: none;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--purple-primary);
+  box-shadow: 0 0 0 2px rgba(106, 90, 205, 0.2);
+  background: var(--ha-bg-card);
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+.form-group select {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right var(--space-3) center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  padding-right: var(--space-10);
+}
+
+/* Input with Icon */
+.input-with-icon {
+  position: relative;
+}
+
+.input-with-icon i {
+  position: absolute;
+  left: var(--space-4);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.input-with-icon input {
+  padding-left: var(--space-10);
+}
+
+/* Search Input Group */
+.search-input-group {
+  display: flex;
+  gap: 0;
+  margin-top: var(--space-6);
+  position: relative;
+}
+
+.search-input-group input {
+  flex: 1;
+  padding: var(--space-4);
+  background: var(--ha-bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-right: none;
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  transition: all var(--transition-base);
+}
+
+.search-input-group input:focus {
+  outline: none;
+  border-color: var(--purple-primary);
+  box-shadow: 0 0 0 3px var(--purple-glow);
+  background: var(--ha-bg-card);
+  z-index: 1;
+}
+
+.search-input-group .btn {
+  padding: var(--space-4) var(--space-6);
+  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  margin-left: -1px;
+  transition: all var(--transition-base);
+  z-index: 1;
+}
+
+.search-input-group .btn:hover {
+  z-index: 2;
+}
+
+/* Enhanced API Key Actions */
+.api-key-actions {
+  display: flex;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.api-key-actions .btn {
+  flex-grow: 1;
+  flex-basis: auto;
+  min-width: 120px;
+}
+
+/* Camera Select Enhancement */
+.camera-select {
+  margin: var(--space-6) 0;
+}
+
+.camera-select label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: var(--space-3);
+}
+
+.camera-select select {
+  width: 100%;
+  padding: var(--space-4);
+  background: var(--ha-bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  transition: var(--transition);
+}
+
+.camera-select select:focus {
+  outline: none;
+  border-color: var(--purple-accent);
+  box-shadow: 0 0 0 3px var(--purple-glow);
+  background: var(--ha-bg-card);
+}
+
+/* Form Validation States */
+.form-group.error input,
+.form-group.error select,
+.form-group.error textarea {
+  border-color: var(--accent-error);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.form-group.success input,
+.form-group.success select,
+.form-group.success textarea {
+  border-color: var(--accent-success);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.form-error {
+  color: var(--accent-error);
+  font-size: var(--text-xs);
+  margin-top: var(--space-1);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.form-error i {
+  font-size: var(--text-xs);
+} 
