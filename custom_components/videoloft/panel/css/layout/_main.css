@@ -1,34 +1,125 @@
 /* ===============================
-   ULTRA MODERN MAIN LAYOUT
+   CLEAN & MODERN MAIN LAYOUT
    =============================== */
+
+.videoloft-panel {
+  width: 100%;
+  height: 100vh;
+  overflow: auto;
+  background: var(--vl-background-gradient);
+}
 
 .main-content {
   margin-top: 72px;
-  padding: var(--space-8);
+  padding: 0;
   min-height: calc(100vh - 72px);
   background: transparent;
   position: relative;
   z-index: 2;
+  width: 100%;
+}
+
+/* Mobile: Adjust for bottom navigation */
+@media (max-width: 768px) {
+  .main-content {
+    margin-top: 0;
+    margin-bottom: 64px;
+    min-height: calc(100vh - 64px);
+  }
+  
+  /* LPR tab mobile spacing override */
+  #lprTab {
+    padding: var(--space-4); /* Match other tabs on mobile */
+  }
+}
+
+/* LPR tab specific padding */
+#lprTab {
+  padding: var(--space-6);
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.content-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-6);
+  padding: var(--space-4) 0;
+}
+
+.status-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--ha-bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12);
+  color: var(--text-secondary);
+  gap: var(--space-4);
 }
 
 .content-card {
-  background: var(--ha-bg-card);
-  border: 1px solid var(--border-primary);
+  background: rgba(26, 26, 40, 0.75);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(251, 251, 251, 0.1);
   border-radius: var(--radius-xl);
-  padding: var(--space-6); /* Restored default padding */
-  margin: var(--space-2) auto;
+  padding: var(--space-8);
+  margin: 0 auto var(--space-6) auto;
   width: 100%;
   max-width: 100%;
-  box-shadow: var(--shadow-2xl);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
   position: relative;
   overflow: hidden;
-  backdrop-filter: blur(10px);
-  animation: slideInCard 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: fadeInContent 0.5s ease-in-out;
+  transition: all var(--transition-smooth);
 }
 
-/* Padding for the content sections inside the content-card */
-#other-tabs-wrapper .tab-section.active {
-  padding: var(--space-6); /* Add padding to the active content section */
+.content-card:hover {
+  background: rgba(26, 26, 40, 0.85);
+  border-color: rgba(52, 202, 198, 0.2);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(52, 202, 198, 0.1) inset;
+  transform: translateY(-2px);
+}
+
+.content-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: transparent;
+  opacity: 0;
+  transition: opacity var(--transition-smooth);
+}
+
+.content-card:hover::before {
+  opacity: 0;
 }
 
 #other-tabs-wrapper {
@@ -37,70 +128,50 @@
   width: 100%;
   max-width: 100%;
   margin: 0 auto;
-  padding: 0; /* This correctly overrides .content-card padding for the wrapper */
+  padding: 0;
 }
 
-.content-card::before,
-.camera-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
-  opacity: 0.4;
-}
-
-.camera-card::before {
-  z-index: 1;
-}
-
-.content-card::after,
-.camera-card::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: 1px;
-  background: linear-gradient(180deg, transparent, var(--accent-primary), transparent);
-  opacity: 0.2;
-}
-
-.camera-card::after {
-  z-index: 1;
-}
-
-/* Enhanced Tab Sections */
+/* Enhanced Tab Sections - Fixed for proper isolation */
 .tab-section {
   display: none;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: auto;
+  overflow: hidden;
   animation: fadeInContent 0.4s ease-out;
+  min-height: calc(100vh - 120px); /* Ensure full height coverage */
 }
 
 .tab-section.active {
   display: block;
+  z-index: 10;
 }
 
-@keyframes slideInCard {
-  from {
-    opacity: 0;
-    transform: translateY(40px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+/* Ensure main content container doesn't overlap but keeps gradient */
+.main-content {
+  margin-top: 72px;
+  padding: 0;
+  min-height: calc(100vh - 72px);
+  background: transparent; /* Keep transparent to show gradient */
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  overflow-x: hidden; /* Prevent horizontal scroll issues */
+}
+
+.tab-content-wrapper {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: var(--space-8) var(--space-6);
 }
 
 @keyframes fadeInContent {
   from {
     opacity: 0;
-    transform: translateY(20px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -109,51 +180,73 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  margin-bottom: var(--space-8);
+  margin: 0 0 var(--space-6) 0;
   padding-bottom: var(--space-4);
   border-bottom: 1px solid var(--border-primary);
   position: relative;
-  padding-left: var(--space-4);
+  color: var(--text-primary);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
-.section-title::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  width: 60px;
-  height: 2px;
-  background: linear-gradient(90deg, var(--accent-primary), var(--purple-secondary));
-  border-radius: var(--radius-full);
+.section-title i {
+  color: var(--turquoise);
+  font-size: var(--text-xl);
 }
 
 .section-title h2 {
   color: var(--text-primary);
   font-weight: 600;
   letter-spacing: -0.02em;
+  margin: 0;
 }
 
 /* Make the AI Search section title more compact */
 #aiSearchTab .section-title {
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-5);
 }
 
-/* Fix for the live tab section to ensure it doesn't overlap with videos */
+.section-title-centered {
+  text-align: center;
+  justify-content: center;
+  width: 100%;
+}
+
 #liveTab {
-  padding-bottom: var(--space-8);
+  padding-bottom: var(--space-6);
   z-index: 1;
 }
 
-/* Ensure other tabs are above any background elements */
 #other-tabs-wrapper {
   position: relative;
   z-index: 3;
 }
 
-/* Remove the backdrop from the liveTab completely to ensure it doesn't overlap */
 #liveTab.live-backdrop {
   background: transparent;
   border: none;
   box-shadow: none;
   backdrop-filter: none;
-} 
+}
+
+/* Additional tab isolation to prevent bleeding */
+#liveTab, #lprTab, #aiSearchTab {
+  position: relative;
+  width: 100%;
+  height: auto;
+  background: transparent;
+  isolation: isolate; /* Create new stacking context */
+}
+
+#liveTab.active, #lprTab.active, #aiSearchTab.active {
+  z-index: 100; /* Ensure active tab is on top */
+}
+
+/* Ensure non-active tabs are completely hidden */
+#liveTab:not(.active), #lprTab:not(.active), #aiSearchTab:not(.active) {
+  display: none !important;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}

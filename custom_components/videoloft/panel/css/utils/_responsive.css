@@ -20,42 +20,29 @@
     gap: var(--space-6);
   }
 
+  .lpr-combined-section {
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+
   .search-results-grid {
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  }
-
-  .lpr-left-panel,
-  .lpr-right-panel {
-    height: auto;
-    min-height: auto;
-    /* gap and width are inherited */
-  }
-
-  .lpr-form-container,
-  .log-header { /* .log-header already has flex: none */
-    flex: none; /* Ensures lpr-form-container also respects this */
-    min-height: auto;
-  }
-
-  .lpr-triggers-list,
-  .log-container {
-    flex: 1; /* Allow them to grow and fill space */
-    min-height: 300px; /* Ensure a minimum scrollable area */
-    height: auto; /* Override fixed heights */
-    max-height: none; /* Remove max-height limits */
-    /* overflow-y: auto; is inherited from base consolidation */
-  }
-
-  .triggers-container { /* This is inside .lpr-triggers-list */
-    height: auto; /* Content dictates height */
-    flex: none; /* Not a flex item in this context usually */
-    overflow-y: visible; /* Parent .lpr-triggers-list handles scrolling */
   }
 }
 
 @media (max-width: 768px) {
   .header {
     height: 64px;
+    padding: 0 var(--space-4);
+  }
+
+  .header-content {
+    flex-direction: row;
+    justify-content: center; /* Center navigation on mobile */
+  }
+
+  .logo-section h1 {
+    font-size: var(--text-lg);
   }
 
   .top-nav .nav-item {
@@ -73,17 +60,28 @@
 
   .main-content {
     padding: 0;
-    margin-top: 64px;
+    margin-top: 0; /* Remove top margin for bottom nav */
+    margin-bottom: 64px; /* Add bottom margin for navigation */
+  }
+  
+  /* Standardized mobile spacing - match AI Search layout */
+  .tab-content-wrapper {
+    padding: var(--space-4); /* Consistent padding across all tabs */
+  }
+
+  /* LPR Tab: Reduce excessive padding to match AI Search */
+  #lprTab {
+    padding: var(--space-4); /* Match AI Search padding */
   }
 
   .content-card {
-    padding: 0;
+    padding: var(--space-4); /* Consistent card padding */
     border-radius: var(--radius-lg);
-    margin: var(--space-1) auto;
+    margin: var(--space-2) 0; /* Minimal edge margins */
   }
 
   #other-tabs-wrapper .tab-section.active {
-    padding: var(--space-4);
+    padding: 0; /* Remove extra padding, let tab-content-wrapper handle it */
   }
 
   .button-group {
@@ -181,6 +179,46 @@
     grid-column: auto !important;
     grid-row: auto !important;
   }
+  
+  /* Mobile-specific video handling to ensure thumbnails display properly */
+  .video-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+  
+  .video-container video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 15;
+    /* Ensure video doesn't show until actually playing with content */
+    display: none;
+    visibility: hidden;
+  }
+  
+  .video-container .thumbnail {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 10;
+    /* Ensure thumbnail stays visible until video is playing */
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    transition: opacity 0.3s ease-out;
+  }
+  
+  /* Ensure video has a smooth transition when it becomes visible */
+  .video-container video.mobile-ready {
+    transition: opacity 0.3s ease-in;
+  }
 
   .camera-card-span-2,
   .camera-card-span-3 { /* Assuming span-3 might exist or for consistency */
@@ -224,9 +262,67 @@
     backdrop-filter: none;
   }
 
+  /* Live tab mobile spacing to match other tabs */
+  #liveTab {
+    padding: var(--space-4); /* Consistent with other tabs */
+  }
+
   .lpr-container { /* Already defined in 1200px, but ensure it's here if needed */
     grid-template-columns: 1fr;
     gap: var(--space-6);
+  }
+  
+  /* Mobile-specific improvements for LPR section */
+  .lpr-combined-section {
+    grid-template-columns: 1fr;
+    gap: var(--space-3); /* Reduced gap for mobile */
+  }
+  
+  /* LPR Cards: Better mobile spacing */
+  .lpr-combined-section .card {
+    min-height: 250px; /* Reduced minimum height */
+    margin-bottom: var(--space-3);
+    padding: var(--space-4); /* Consistent with other mobile cards */
+  }
+  
+  /* Make trigger items more compact on mobile */
+  .trigger-item {
+    padding: var(--space-2) var(--space-3);
+    margin-bottom: var(--space-2);
+    min-height: 50px;
+  }
+  
+  .trigger-details {
+    flex-direction: column;
+    gap: var(--space-1);
+    align-items: flex-start;
+  }
+  
+  .trigger-details .trigger-plate {
+    font-size: var(--text-sm);
+    padding: var(--space-1);
+  }
+  
+  .trigger-details .trigger-camera {
+    font-size: var(--text-xs);
+  }
+  
+  .trigger-actions .btn {
+    min-height: 28px;
+    padding: var(--space-1);
+    font-size: var(--text-xs);
+  }
+  
+  /* Maximize available width for form elements on mobile */
+  .lpr-form .form-group select,
+  .lpr-form .form-group input[type="text"] {
+    width: 100%;
+    margin: 0;
+  }
+  
+  /* Ensure triggers container doesn't take too much space on mobile */
+  .lpr-combined-section .card .triggers-container {
+    max-height: 150px;
   }
 }
 
@@ -248,6 +344,10 @@
     margin: var(--space-1);
     padding: var(--space-3);
   }
+  
+  .tab-content-wrapper {
+    padding: var(--space-3) var(--space-2);
+  }
 
   .section-title {
     font-size: var(--text-lg);
@@ -257,10 +357,27 @@
   .search-events-management {
     padding: var(--space-4);
   }
+  
+  /* Ultra-compact layout for small screens */
+  .lpr-combined-section .card {
+    min-height: 250px;
+  }
+  
+  .lpr-combined-section .card .triggers-container {
+    max-height: 120px;
+  }
+  
+  .lpr-form {
+    gap: var(--space-3);
+  }
+  
+  .lpr-form .btn-primary {
+    margin-top: var(--space-2);
+  }
 }
 
 @media (min-width: 1400px) {
   .search-results-grid {
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   }
-} 
+}

@@ -1,121 +1,130 @@
 /* ===============================
-   VIDEOLOFT VMS - ULTRA PROFESSIONAL UI
-   Polished • Modern • Home Assistant Pro Theme
-   =============================== */
+ * NEW VIDEOLOFT UI - VARIABLES
+ * =============================== */
 
-   :root {
-     /* Enhanced Design System Colors */
-     --ha-bg-primary: #0D0D12; /* Slightly lighter dark base */
-     --ha-bg-secondary: #15151C; /* Slightly lighter secondary background */
-     --ha-bg-card: #1A1A28; /* Refined card background */
-     --ha-bg-elevated: #202030; /* Refined elevated background */
-     --ha-bg-overlay: #25253A; /* Refined overlay */
-     --ha-bg-header: #0B0B10; /* Darker header for contrast */
-     --ha-bg-nav: #181825; /* Refined nav background */
-     /* Refined Purple Gradient System - More subtle and professional */
-     --purple-primary: #6A5ACD; /* SlateBlue - A more modern, less intense purple */
-     --purple-secondary: #7B68EE; /* MediumSlateBlue */
-     --purple-tertiary: #8A2BE2; /* BlueViolet - for specific accents if needed */
-     --purple-light: #9370DB; /* MediumPurple */
-     --purple-accent: #483D8B; /* DarkSlateBlue - for deeper accents */
-     --purple-muted: rgba(106, 90, 205, 0.08); /* Muted SlateBlue */
-     --purple-glow: rgba(106, 90, 205, 0.15); /* Glow SlateBlue */
-     --purple-hover: rgba(123, 104, 238, 0.12); /* Hover MediumSlateBlue */
-       /* Enhanced UI Accents */
-     --accent-primary: var(--purple-primary);
-     --accent-secondary: #0B051A;
-     --accent-success: #10b981;
-     --accent-warning: #f59e0b;
-     --accent-error: #ef4444;
-     --accent-info: #3b82f6;
-   
-     /* Sophisticated Text Hierarchy */
-     --text-primary: #f8fafc;
-     --text-secondary: #cbd5e1;
-     --text-tertiary: #94a3b8;
-     --text-muted: #64748b;
-     --text-disabled: #475569;
-     --text-inverse: #1e293b;
-   
-     /* Enhanced Border System */
-     --border-primary: rgba(248, 250, 252, 0.08); /* Slightly softer primary border */
-     --border-secondary: rgba(248, 250, 252, 0.04); /* Softer secondary border */
-     --border-accent: rgba(106, 90, 205, 0.4); /* Accent border using new purple */
-     --border-focus: rgba(106, 90, 205, 0.6); /* Focus border */
-     --border-success: rgba(16, 185, 129, 0.4);
-     --border-warning: rgba(245, 158, 11, 0.4);
-     --border-error: rgba(239, 68, 68, 0.4);
-   
-     /* Professional Shadow System */
-     --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-     --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-     --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-     --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-     --shadow-purple: 0 8px 20px -5px rgba(106, 90, 205, 0.25); /* Adjusted purple shadow */
-     --shadow-purple-glow: 0 0 15px rgba(106, 90, 205, 0.35); /* Adjusted purple glow */
-   
-     /* Perfect Spacing Scale */
-     --space-0: 0;
-     --space-px: 1px;
-     --space-0-5: 2px;
-     --space-1: 4px;
-     --space-1-5: 6px;
-     --space-2: 8px;
-     --space-2-5: 10px;
-     --space-3: 12px;
-     --space-3-5: 14px;
-     --space-4: 16px;
-     --space-5: 20px;
-     --space-6: 24px;
-     --space-7: 28px;
-     --space-8: 32px;
-     --space-9: 36px;
-     --space-10: 40px;
-     --space-11: 44px;
-     --space-12: 48px;
-     --space-14: 56px;
-     --space-16: 64px;
-     --space-20: 80px;
-     --space-24: 96px;
-     --space-28: 112px;
-     --space-32: 128px;
-   
-     /* Modern Border Radius */
-     --radius-none: 0;
-     --radius-sm: 0.125rem;
-     --radius-base: 0.25rem;
-     --radius-md: 0.375rem;
-     --radius-lg: 0.5rem;
-     --radius-xl: 0.75rem;
-     --radius-2xl: 1rem;
-     --radius-3xl: 1.5rem;
-     --radius-full: 9999px;
-   
-     /* Smooth Animations */
-     --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-     --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-     --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-     --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
-   
-     /* Typography Scale */
-     --text-xs: 0.75rem;
-     --text-sm: 0.875rem;
-     --text-base: 1rem;
-     --text-lg: 1.125rem;
-     --text-xl: 1.25rem;
-     --text-2xl: 1.5rem;
-     --text-3xl: 1.875rem;
-     --text-4xl: 2.25rem;
-   
-     /* Z-Index Scale */
-     --z-dropdown: 1000;
-     --z-sticky: 1020;
-     --z-fixed: 1030;
-     --z-modal-backdrop: 1040;
-     --z-modal: 1050;
-     --z-popover: 1060;
-     --z-tooltip: 1070;
-     --z-toast: 1080;
-   } 
+:root {
+  /* New Color Palette */
+  --gradient-dark-blue: #3343d3;
+  --turquoise: #34cac6;
+  --gradient-purple: #ae50db;
+  --text-grey: #424143;
+  --faded-grey: #a1a1a1;
+  --pink: #E32747;
+  --off-white: #fbfbfb;
+  --yellow-highlight: #ffe500;
+  --light-grey: #F1F1F1;
+  --mid-grey: #C9C9C9;
+  --dark-grey: #63636F;
+  --light-turquoise: #B2FFFD;
+  --vl-red: #EC2144;
+  --vl-green: #00FF29;
+  --support-red: #FF6347;
+
+  /* Purple variants */
+  --purple-primary: #6A5ACD;
+  --purple-light: #9370DB;
+  --purple-accent: var(--gradient-purple);
+
+  /* Accent colors for compatibility */
+  --accent-primary: var(--turquoise);
+  --accent-secondary: var(--gradient-purple);
+  --accent-success: var(--vl-green);
+  --accent-error: var(--vl-red);
+  --accent-warning: var(--yellow-highlight);
+  --accent-info: var(--gradient-dark-blue);
+
+  /* Gradients */
+  --vl-background-gradient: linear-gradient(180deg, #004C5B 0%, rgba(24, 24, 40, 0.83) 100%);
+  --default-background-gradient: linear-gradient(180deg, #63636F 0%, #52525E 100%);
+  --timeline-overlay-gradient: linear-gradient(90deg, #FFFFFF 0%, rgba(255, 255, 255, 0.7) 70%, rgba(255, 255, 255, 0) 100%);
+  --install-gradient: linear-gradient(90deg, #34CAC6 0%, #B03DE3 50%, #3343D3 100%);
+
+  /* Base UI Colors from new palette */
+  --ha-bg-primary: #0D0D12;
+  --ha-bg-secondary: #15151C;
+  --ha-bg-card: #1A1A28;
+  --ha-bg-elevated: #202030;
+  --ha-bg-overlay: rgba(24, 24, 40, 0.83);
+  --ha-bg-header: transparent;
+  --ha-bg-nav: #181825;
+
+  /* Text */
+  --text-primary: var(--off-white);
+  --text-secondary: var(--faded-grey);
+  --text-tertiary: var(--text-grey);
+  --text-muted: var(--dark-grey);
+
+  /* Borders */
+  --border-primary: rgba(251, 251, 251, 0.1);
+  --border-secondary: rgba(251, 251, 251, 0.05);
+  --border-accent: var(--turquoise);
+
+  /* Shadows */
+  --subtle-drop-shadow: 0px 0px 3.6px 0px rgba(8, 18, 106, 0.1);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --shadow-purple: 0 6px 20px rgba(106, 90, 205, 0.3);
+  
+  /* Spacing, Radius, Transitions, Typography, Z-Index can remain the same for now */
+  /* They can be tweaked later if needed */
+  --space-0: 0;
+  --space-px: 1px;
+  --space-0-5: 2px;
+  --space-1: 4px;
+  --space-1-5: 6px;
+  --space-2: 8px;
+  --space-2-5: 10px;
+  --space-3: 12px;
+  --space-3-5: 14px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-9: 36px;
+  --space-10: 40px;
+  --space-11: 44px;
+  --space-12: 48px;
+  --space-14: 56px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+  --space-28: 112px;
+  --space-32: 128px;
+
+  --radius-none: 0;
+  --radius-sm: 0.125rem;
+  --radius-base: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+  --radius-full: 9999px;
+
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+  --z-toast: 1080;
+} 
