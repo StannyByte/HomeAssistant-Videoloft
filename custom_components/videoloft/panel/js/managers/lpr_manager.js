@@ -8,6 +8,7 @@ class LPRManager {
     this.cameraSelect = document.getElementById("cameraSelect");
     this.lprForm = document.getElementById("lprForm");
     this.triggersList = document.getElementById("lprTriggersList");
+    this.cameras = []; // Store cameras for name lookup
     this.init();
   }
 
@@ -29,20 +30,15 @@ class LPRManager {
       const response = await fetch("/api/videoloft/cameras");
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
-      const cameras = data.cameras || [];
+      this.cameras = data.cameras || []; // Store cameras for name lookup
       if (this.cameraSelect) {
         this.cameraSelect.innerHTML = "<option value=''>Select Camera</option>";
-        cameras.forEach((camera) => {
+        this.cameras.forEach((camera) => {
           const option = document.createElement("option");
           option.value = camera.uidd;
           option.textContent = camera.name;
           this.cameraSelect.appendChild(option);
         });
-        console.log(
-          cameras.length > 0
-            ? `Loaded ${cameras.length} cameras into selector`
-            : "No cameras available for LPR triggers"
-        );
       }
     } catch (error) {
       console.error("Failed to populate camera selector:", error);
@@ -57,17 +53,32 @@ class LPRManager {
   setupWebSocket() {
     const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${wsProtocol}//${window.location.host}/api/videoloft/ws/lpr_logs`;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5;
+    
     const connect = () => {
-      console.log("Attempting WebSocket connection to:", wsUrl);
+      if (reconnectAttempts >= maxReconnectAttempts) {
+        this.addLogEntry({
+          timestamp: new Date().toISOString(),
+          level: "ERROR",
+          message: "Maximum WebSocket reconnection attempts reached. Please refresh the page.",
+        });
+        return;
+      }
+      
+      console.log(`Attempting WebSocket connection to: ${wsUrl} (attempt ${reconnectAttempts + 1})`);
       this.ws = new WebSocket(wsUrl);
+      
       this.ws.onopen = () => {
         console.log("WebSocket connected");
+        reconnectAttempts = 0; // Reset on successful connection
         this.addLogEntry({
           timestamp: new Date().toISOString(),
           level: "INFO",
           message: "WebSocket connected - Log streaming active",
         });
       };
+      
       this.ws.onmessage = (event) => {
         try {
           const log = JSON.parse(event.data);
@@ -77,6 +88,7 @@ class LPRManager {
           console.error("Error processing log:", error);
         }
       };
+      
       this.ws.onerror = (error) => {
         console.error("WebSocket error:", error);
         this.addLogEntry({
@@ -85,14 +97,29 @@ class LPRManager {
           message: "WebSocket error occurred",
         });
       };
-      this.ws.onclose = () => {
-        console.log("WebSocket closed, attempting to reconnect...");
+      
+      this.ws.onclose = (event) => {
+        // Check if it's a normal closure (integration being unloaded)
+        if (event.code === 1001 || event.code === 1000) {
+          console.log("WebSocket closed normally (integration unloaded)");
+          this.addLogEntry({
+            timestamp: new Date().toISOString(),
+            level: "INFO",
+            message: "WebSocket disconnected - Integration was reloaded",
+          });
+          return; // Don't attempt to reconnect for normal closures
+        }
+        
+        console.log(`WebSocket closed (code: ${event.code}), attempting to reconnect...`);
         this.addLogEntry({
           timestamp: new Date().toISOString(),
           level: "WARNING",
-          message: "WebSocket disconnected - Attempting to reconnect...",
+          message: `WebSocket disconnected (code: ${event.code}) - Attempting to reconnect...`,
         });
-        setTimeout(connect, 5000);
+        
+        reconnectAttempts++;
+        const delay = Math.min(5000 * reconnectAttempts, 30000); // Exponential backoff, max 30s
+        setTimeout(connect, delay);
       };
     };
     connect();
@@ -159,18 +186,25 @@ class LPRManager {
   }
   displayTriggers(triggers) {
     if (!this.triggersList) return;
+    
+    // Helper function to get camera name by uidd
+    const getCameraName = (uidd) => {
+      const camera = this.cameras.find(cam => cam.uidd === uidd);
+      return camera ? camera.name : uidd;
+    };
+
     this.triggersList.innerHTML = triggers
       .map(
         (trigger, index) => `
                 <div class="trigger-item">
                   <div class="trigger-info">
                     <div class="trigger-details">
-                      <span><strong>Plate:</strong> ${trigger.license_plate}</span>
-                      <span><strong>Camera:</strong> ${trigger.uidd}</span>
+                      <span class="trigger-plate">${trigger.license_plate.toUpperCase()}</span>
+                      <span class="trigger-camera"><i class="fas fa-camera"></i> ${getCameraName(trigger.uidd)}</span>
                     </div>
                   </div>
                   <div class="trigger-actions">
-                    <button class="btn btn-warning" onclick="window.deleteLPRTrigger(${index})" aria-label="Delete trigger">
+                    <button class="btn btn-primary" onclick="window.deleteLPRTrigger(${index})" aria-label="Delete trigger">
                       <i class="fas fa-trash"></i>
                     </button>
                   </div>

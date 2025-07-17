@@ -22,34 +22,20 @@ class Tabs {
   }
 
   showTabContent(selectedItem, showNotification = true) {
+    // Remove active class from all nav items and sections
     this.navItems.forEach((item) => item.classList.remove("active"));
     selectedItem.classList.add("active");
 
     this.tabSections.forEach((section) => section.classList.remove("active"));
+    
+    // Activate the target tab section
     const tabId = selectedItem.getAttribute("data-tab");
     const activeSection = document.getElementById(`${tabId}Tab`);
-    const otherTabsWrapper = document.getElementById("other-tabs-wrapper");
-
-    if (otherTabsWrapper) {
-      if (tabId === 'live') {
-        otherTabsWrapper.style.display = 'none';
-      } else {
-        otherTabsWrapper.style.display = 'block'; // Or 'flex' depending on its original display type
-      }
-    }
 
     if (activeSection) {
       activeSection.classList.add("active");
     } else {
       console.warn(`No tab section found for tab ID: ${tabId}`);
-    }
-    // Log which tab is activated (using a utility function if available)
-    // Ensure capitalizeFirstLetter is defined or imported if this file is a module
-    // For now, assuming it's globally available or will be handled by module system
-    if (typeof capitalizeFirstLetter === 'function') {
-        console.log(`${capitalizeFirstLetter(tabId)} tab activated`);
-    } else {
-        console.log(`${tabId.charAt(0).toUpperCase() + tabId.slice(1)} tab activated`);
     }
   }
 } 

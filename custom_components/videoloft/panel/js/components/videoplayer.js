@@ -7,14 +7,27 @@ class VideoloftPlayer {
     this.streamTimeouts = new Map();
     this.streamAttempts = new Map();
     this.streamStartTimes = new Map();
-    this.STREAM_TIMEOUT = 8000;
-    this.MAX_LOAD_RETRIES = 5;
-    this.RETRY_DELAY = 1500;
+    this.STREAM_TIMEOUT = 12000;
+    this.MAX_LOAD_RETRIES = 6;
+    this.RETRY_DELAY = 1000;
+    this.BUFFER_HEALTH_CHECK_INTERVAL = 5000;
+    
+    // Mobile detection for enhanced thumbnail handling
+    this.isMobile = this.detectMobile();
+    
     this.init();
   }
+  
+  detectMobile() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+           window.innerWidth <= 768;
+  }
   init() {
+    this.loadCameraOrder();
     this.renderCameras();
     this.setGridColumns();
+    this.setupDragAndDrop();
     this.startStreams();
     // Add debounced resize handler to prevent constant recalculation
     let resizeTimeout;
@@ -38,20 +51,28 @@ class VideoloftPlayer {
         const spanClass = isThirdInGroup ? 'camera-card-span-2' : '';
         
         return `
-        <div class="camera-card ${spanClass}" id="card-${camera.uidd}">
+        <div class="camera-card ${spanClass}" id="card-${camera.uidd}" data-uidd="${camera.uidd}" title="Drag to reorder cameras">
           <div class="video-container">
-            <img id="thumb-${camera.uidd}" class="thumbnail" src="/api/videoloft/thumbnail/${camera.uidd}" alt="Loading thumbnail..." />
-            <div class="loading-spinner" id="spinner-${camera.uidd}"></div>
-            <video id="video-${camera.uidd}" playsinline muted></video>
-            <button class="fullscreen-button" aria-label="Toggle fullscreen">
-              <i class="fas fa-expand"></i>
-            </button>
+            <img id="thumb-${camera.uidd}" 
+                 class="thumbnail" 
+                 src="/api/videoloft/thumbnail/${camera.uidd}?t=${Date.now()}" 
+                 alt="Loading thumbnail..." 
+                 style="display: block;" />
+            <div class="loading-spinner" id="spinner-${camera.uidd}" style="display: none;"></div>
+            <video id="video-${camera.uidd}" 
+                   playsinline 
+                   muted 
+                   preload="none"
+                   poster="/api/videoloft/thumbnail/${camera.uidd}?t=${Date.now()}"
+                   style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;"></video>
+            
             <div class="camera-header">
-              <div class="camera-name">
-                <i class="fas fa-video"></i> ${camera.name}
-              </div>
-              <div class="camera-info">
-                <i class="fas fa-camera"></i> ${camera.model} - ${camera.resolution}
+              <div class="camera-header-content">
+                <span class="camera-name"><i class="fas fa-video"></i> ${camera.name}</span>
+                <span class="camera-info">${camera.model} - ${camera.resolution}</span>
+                <button class="fullscreen-button" aria-label="Toggle fullscreen">
+                  <i class="fas fa-expand"></i>
+                </button>
               </div>
             </div>
             <div class="error-message" id="error-${camera.uidd}"></div>
@@ -60,8 +81,39 @@ class VideoloftPlayer {
       `;
       })
       .join("");
-    this.updateOnlineCameras();
+    
     this.setupFullscreenHandlers();
+    this.setupThumbnailRefresh();
+    this.setupOverlayToggle();
+  }
+
+  setupThumbnailRefresh() {
+    // Set up thumbnail refresh for all cameras
+    this.cameras.forEach((camera) => {
+      const thumbnail = document.getElementById(`thumb-${camera.uidd}`);
+      if (thumbnail) {
+        // Refresh thumbnail every 2 minutes
+        setInterval(() => {
+          this.refreshThumbnail(camera.uidd);
+        }, 120000);
+        
+        // Handle thumbnail loading errors
+        thumbnail.onerror = () => {
+          console.warn(`Failed to load thumbnail for ${camera.name}, retrying...`);
+          setTimeout(() => this.refreshThumbnail(camera.uidd), 5000);
+        };
+      }
+    });
+  }
+
+  refreshThumbnail(uidd) {
+    const thumbnail = document.getElementById(`thumb-${uidd}`);
+    if (thumbnail) {
+      // Add timestamp to bypass cache and get fresh thumbnail
+      const currentSrc = thumbnail.src;
+      const baseSrc = currentSrc.split('?')[0];
+      thumbnail.src = `${baseSrc}?t=${Date.now()}`;
+    }
   }
 
   setupFullscreenHandlers() {
@@ -302,13 +354,11 @@ class VideoloftPlayer {
     grid.style.gridTemplateColumns = `repeat(${columns}, ${finalCellWidth}px)`;
     grid.style.gridTemplateRows = `repeat(${rows}, ${finalCellHeight}px)`;
     grid.style.gap = `${baseGap}px`;
-    grid.style.width = `${gridWidth}px`;
+    grid.style.width = `${Math.min(gridWidth, availableWidth)}px`;
     grid.style.height = `${gridHeight}px`;
     grid.style.margin = '10px auto';
     grid.style.justifyContent = 'center';
     grid.style.alignContent = 'center';
-    
-    console.log(`VMS Grid Layout: ${columns}x${rows} (${cameraCount} cameras) - ${Math.round(finalCellWidth)}x${Math.round(finalCellHeight)}px cells`);
   }
 
   // Calculate optimal gap size based on camera count for professional appearance
@@ -338,8 +388,6 @@ class VideoloftPlayer {
     // Ensure proper overflow
     grid.style.overflow = 'visible';
     grid.style.maxHeight = 'none';
-    
-    console.log('Mobile layout: Full width vertical list');
   }    calculateOptimalLayoutForScreen(cameraCount, screenWidth, screenHeight) {
     // Advanced VMS layout algorithm for professional surveillance monitoring
     // Optimized for maximum screen utilization while maintaining readability
@@ -432,7 +480,6 @@ class VideoloftPlayer {
     const attempts = this.streamAttempts.get(camera.uidd) || 0;
     if (attempts < this.MAX_LOAD_RETRIES) {
       this.streamAttempts.set(camera.uidd, attempts + 1);
-      console.log(`Restarting stream for ${camera.name} (Attempt ${attempts + 1})`);
       this.reloadStream(camera.uidd);
     } else {
       console.error(`Stream failed to load for ${camera.name} after ${attempts} attempts`);
@@ -447,8 +494,26 @@ class VideoloftPlayer {
 
   initializeStream(camera, videoElement, spinner, thumbnail, errorElement, retryCount = 0) {
     if (spinner) spinner.style.display = "block";
-    if (thumbnail) thumbnail.style.display = "block";
-    if (videoElement) videoElement.style.display = "none";
+    
+    // Always show thumbnail until video is playing (especially important on mobile)
+    if (thumbnail) {
+      thumbnail.style.display = "block";
+      thumbnail.style.opacity = "1";
+      thumbnail.style.filter = "none";
+      thumbnail.style.zIndex = "10";
+    }
+    
+    // Ensure video is hidden until it's actually playing
+    if (videoElement) {
+      videoElement.style.display = "none";
+      videoElement.style.zIndex = "15";
+      
+      // On mobile, add extra insurance against early video visibility
+      if (this.isMobile) {
+        videoElement.style.visibility = "hidden";
+      }
+    }
+    
     if (errorElement) errorElement.style.display = "none";
 
     this.clearStreamTimeout(camera.uidd);
@@ -460,32 +525,168 @@ class VideoloftPlayer {
       const hls = new Hls({
         enableWorker: true,
         debug: false,
-        manifestLoadingMaxRetry: 5,
-        manifestLoadingRetryDelay: 1500,
-        levelLoadingMaxRetry: 5,
-        levelLoadingRetryDelay: 1500,
-        fragLoadingMaxRetry: 5,
-        fragLoadingRetryDelay: 1500,
+        // Network retry configuration
+        manifestLoadingMaxRetry: 6,
+        manifestLoadingRetryDelay: 1000,
+        levelLoadingMaxRetry: 6,
+        levelLoadingRetryDelay: 1000,
+        fragLoadingMaxRetry: 8,
+        fragLoadingRetryDelay: 1000,
+        
+        // Buffer management for surveillance cameras (2024 best practices)
+        maxBufferLength: 20,              // Reduced for faster seeking in surveillance
+        maxMaxBufferLength: 40,           // Maximum buffer for live streams
+        maxBufferSize: 30 * 1000 * 1000,  // 30MB buffer limit
+        maxBufferHole: 0.3,               // Allow small gaps in buffer
+        backBufferLength: 10,             // Keep 10s back buffer (memory optimization)
+        
+        // Low-latency optimization for live surveillance
+        liveSyncDurationCount: 1,         // Start playback after 1 segment (faster startup)
+        liveMaxLatencyDurationCount: 8,   // Max 8 segments behind live edge
+        liveDurationInfinity: true,       // Handle infinite live streams
+        highBufferWatchdogPeriod: 1,      // Aggressive buffer monitoring
+        nudgeOffset: 0.1,                 // Fine-tune playback position
+        nudgeMaxRetry: 3,                 // Retry nudging 3 times
+        
+        // Performance optimizations
+        maxLoadingDelay: 4,               // Max delay before fragment loading
+        maxStarvationDelay: 4,            // Max starvation recovery delay
+        startLevel: -1,                   // Auto-select start quality
+        capLevelToPlayerSize: true,       // Optimize quality for player size
+        
+        // Error recovery
+        fragLoadingTimeOut: 10000,        // 10s fragment timeout
+        manifestLoadingTimeOut: 5000,     // 5s manifest timeout
+        levelLoadingTimeOut: 5000,        // 5s level timeout
       });
       hls.loadSource(streamUrl);
       hls.attachMedia(videoElement);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         this.clearStreamTimeout(camera.uidd);
+        
+        // Start buffer health monitoring
+        this.startBufferHealthMonitoring(camera.uidd, hls, videoElement);
+        
         if (spinner) spinner.style.display = "none";
-        if (thumbnail) thumbnail.style.display = "none";
+        
+        // Set up proper thumbnail to video transition for mobile
         if (videoElement) {
-          videoElement.style.display = "block";
+          // Keep thumbnail visible until video actually starts playing
+          videoElement.addEventListener('loadstart', () => {
+            // Video is starting to load, but keep thumbnail visible
+            console.log(`Video loadstart for ${camera.name}`);
+          }, { once: true });
+          
+          videoElement.addEventListener('canplay', () => {
+            // Video can start playing, but still keep thumbnail visible
+            console.log(`Video canplay for ${camera.name}`);
+          }, { once: true });
+          
+          // For mobile, use a more reliable method to detect when video content is actually playing
+          if (this.isMobile) {
+            let transitionComplete = false;
+            
+            // Listen for timeupdate to ensure video is actually progressing
+            const handleTimeUpdate = () => {
+              if (transitionComplete) return;
+              
+              if (videoElement.currentTime > 0 && videoElement.readyState >= 3) {
+                transitionComplete = true;
+                if (thumbnail) {
+                  thumbnail.style.display = "none";
+                }
+                videoElement.classList.add('mobile-ready');
+                videoElement.style.display = "block";
+                videoElement.style.visibility = "visible";
+                videoElement.removeEventListener('timeupdate', handleTimeUpdate);
+                console.log(`Mobile video transition complete for ${camera.name}`);
+              }
+            };
+            
+            videoElement.addEventListener('timeupdate', handleTimeUpdate);
+            
+            // Fallback using playing event with delay
+            videoElement.addEventListener('playing', () => {
+              if (transitionComplete) return;
+              
+              console.log(`Video playing for ${camera.name}`);
+              // Wait a bit longer on mobile to ensure video has actual frames
+              setTimeout(() => {
+                if (!transitionComplete && videoElement.readyState >= 3 && videoElement.currentTime > 0) {
+                  transitionComplete = true;
+                  if (thumbnail) {
+                    thumbnail.style.display = "none";
+                  }
+                  videoElement.classList.add('mobile-ready');
+                  videoElement.style.display = "block";
+                  videoElement.style.visibility = "visible";
+                  videoElement.removeEventListener('timeupdate', handleTimeUpdate);
+                } else if (!transitionComplete) {
+                  // Video isn't ready yet, wait a bit more
+                  setTimeout(() => {
+                    if (!transitionComplete) {
+                      transitionComplete = true;
+                      if (thumbnail) {
+                        thumbnail.style.display = "none";
+                      }
+                      videoElement.classList.add('mobile-ready');
+                      videoElement.style.display = "block";
+                      videoElement.style.visibility = "visible";
+                      videoElement.removeEventListener('timeupdate', handleTimeUpdate);
+                    }
+                  }, 500);
+                }
+              }, 300);
+            }, { once: true });
+          } else {
+            // Desktop behavior - use the standard playing event
+            videoElement.addEventListener('playing', () => {
+              console.log(`Video playing for ${camera.name}`);
+              if (thumbnail) {
+                thumbnail.style.display = "none";
+              }
+              videoElement.style.display = "block";
+            }, { once: true });
+          }
+          
+          // Start video playback but don't show it yet
           videoElement.play().catch((error) => {
             console.error(`Playback error for ${camera.name}:`, error);
             this.handlePlaybackError(camera, videoElement, spinner, thumbnail, errorElement);
           });
         }
       });
+      
+      // Monitor buffer levels and quality switches
+      hls.on(Hls.Events.BUFFER_APPENDED, () => {
+        if (videoElement && !videoElement.paused) {
+          const buffered = videoElement.buffered;
+          if (buffered.length > 0) {
+            const bufferEnd = buffered.end(buffered.length - 1);
+            const currentTime = videoElement.currentTime;
+            const bufferHealth = bufferEnd - currentTime;
+            
+            // Log buffer health for monitoring
+            if (bufferHealth < 3) {
+              console.warn(`Low buffer health for ${camera.name}: ${bufferHealth.toFixed(2)}s`);
+            }
+          }
+        }
+      });
+      
+      // Track quality switches for optimization
+      hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
+        // Quality switched to level ${data.level}
+      });
       hls.on(Hls.Events.ERROR, (event, data) => {
-        const { type, fatal } = data;
-        console.error(`HLS error for ${camera.name}:`, data);
+        const { type, fatal, details } = data;
+        console.error(`HLS error for ${camera.name}:`, { type, fatal, details, code: data.response?.code });
+        
         if (fatal) {
           this.handleFatalError(hls, camera, videoElement, spinner, thumbnail, errorElement, type, retryCount);
+        } else {
+          // Handle non-fatal errors
+          this.handleNonFatalError(hls, camera, data);
         }
       });
       this.players.set(camera.uidd, hls);
@@ -544,8 +745,75 @@ class VideoloftPlayer {
     videoElement.addEventListener("loadedmetadata", () => {
       this.clearStreamTimeout(camera.uidd);
       if (spinner) spinner.style.display = "none";
-      if (thumbnail) thumbnail.style.display = "none";
-      videoElement.style.display = "block";
+      
+      // Set up proper thumbnail to video transition for mobile (native HLS)
+      if (this.isMobile) {
+        let transitionComplete = false;
+        
+        // Listen for timeupdate to ensure video is actually progressing
+        const handleTimeUpdate = () => {
+          if (transitionComplete) return;
+          
+          if (videoElement.currentTime > 0 && videoElement.readyState >= 3) {
+            transitionComplete = true;
+            if (thumbnail) {
+              thumbnail.style.display = "none";
+            }
+            videoElement.classList.add('mobile-ready');
+            videoElement.style.display = "block";
+            videoElement.style.visibility = "visible";
+            videoElement.removeEventListener('timeupdate', handleTimeUpdate);
+            console.log(`Mobile native video transition complete for ${camera.name}`);
+          }
+        };
+        
+        videoElement.addEventListener('timeupdate', handleTimeUpdate);
+        
+        // Fallback using playing event with delay
+        videoElement.addEventListener('playing', () => {
+          if (transitionComplete) return;
+          
+          console.log(`Native video playing for ${camera.name}`);
+          // Wait a bit longer on mobile to ensure video has actual frames
+          setTimeout(() => {
+            if (!transitionComplete && videoElement.readyState >= 3 && videoElement.currentTime > 0) {
+              transitionComplete = true;
+              if (thumbnail) {
+                thumbnail.style.display = "none";
+              }
+              videoElement.classList.add('mobile-ready');
+              videoElement.style.display = "block";
+              videoElement.style.visibility = "visible";
+              videoElement.removeEventListener('timeupdate', handleTimeUpdate);
+            } else if (!transitionComplete) {
+              // Video isn't ready yet, wait a bit more
+              setTimeout(() => {
+                if (!transitionComplete) {
+                  transitionComplete = true;
+                  if (thumbnail) {
+                    thumbnail.style.display = "none";
+                  }
+                  videoElement.classList.add('mobile-ready');
+                  videoElement.style.display = "block";
+                  videoElement.style.visibility = "visible";
+                  videoElement.removeEventListener('timeupdate', handleTimeUpdate);
+                }
+              }, 500);
+            }
+          }, 300);
+        }, { once: true });
+      } else {
+        // Desktop behavior - use the standard playing event
+        videoElement.addEventListener('playing', () => {
+          console.log(`Native video playing for ${camera.name}`);
+          if (thumbnail) {
+            thumbnail.style.display = "none";
+          }
+          videoElement.style.display = "block";
+        }, { once: true });
+      }
+      
+      // Start video playback but don't show it yet
       videoElement.play().catch((error) => {
         console.error(`Native playback error for ${camera.name}:`, error);
         this.handlePlaybackError(camera, videoElement, spinner, thumbnail, errorElement);
@@ -580,15 +848,24 @@ class VideoloftPlayer {
 
   cleanupPlayer(uidd) {
     this.clearStreamTimeout(uidd);
+    this.stopBufferHealthMonitoring(uidd);
     const player = this.players.get(uidd);
     if (player) {
       if (player instanceof Hls) {
-        player.destroy();
+        try {
+          player.destroy();
+        } catch (e) {
+          console.warn(`Error destroying HLS player for ${uidd}:`, e);
+        }
       } else if (player.type === "native") {
         const element = player.element;
-        element.pause();
-        element.src = "";
-        element.load();
+        try {
+          element.pause();
+          element.src = "";
+          element.load();
+        } catch (e) {
+          console.warn(`Error cleaning up native player for ${uidd}:`, e);
+        }
       }
       this.players.delete(uidd);
     }
@@ -607,4 +884,240 @@ class VideoloftPlayer {
     const onlineEl = document.getElementById("onlineCameras"); // Assuming $ is not available if this becomes a module
     if (onlineEl) onlineEl.textContent = `${this.cameras.length} Cameras Online`;
   }
-} 
+
+  handleNonFatalError(hls, camera, data) {
+    const { details, response } = data;
+    
+    switch (details) {
+      case Hls.ErrorDetails.FRAG_LOAD_TIMEOUT:
+      case Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT:
+        console.warn(`Load timeout for ${camera.name}, will retry automatically`);
+        break;
+      case Hls.ErrorDetails.BUFFER_STALLED_ERROR:
+        console.warn(`Buffer stalled for ${camera.name}, attempting recovery`);
+        try {
+          hls.trigger(Hls.Events.ERROR, {
+            type: Hls.ErrorTypes.MEDIA_ERROR,
+            details: Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE,
+            fatal: false
+          });
+        } catch (e) {
+          console.error(`Buffer recovery failed for ${camera.name}:`, e);
+        }
+        break;
+      case Hls.ErrorDetails.FRAG_PARSING_ERROR:
+        console.warn(`Fragment parsing error for ${camera.name}, may auto-recover`);
+        break;
+      default:
+        // Non-fatal error handled internally
+        break;
+    }
+  }
+
+  startBufferHealthMonitoring(uidd, hls, videoElement) {
+    // Clear any existing monitoring
+    this.stopBufferHealthMonitoring(uidd);
+    
+    const monitoringInterval = setInterval(() => {
+      if (!videoElement || videoElement.paused || hls.destroyed) {
+        clearInterval(monitoringInterval);
+        return;
+      }
+      
+      try {
+        const buffered = videoElement.buffered;
+        const currentTime = videoElement.currentTime;
+        const levels = hls.levels;
+        
+        if (buffered.length > 0 && levels.length > 0) {
+          const bufferEnd = buffered.end(buffered.length - 1);
+          const bufferHealth = bufferEnd - currentTime;
+          const currentLevel = hls.currentLevel;
+          
+          // Adaptive quality adjustment based on buffer health
+          if (bufferHealth < 2 && currentLevel > 0) {
+            // Low buffer, consider dropping quality
+            const newLevel = Math.max(0, currentLevel - 1);
+            hls.nextLevel = newLevel;
+          } else if (bufferHealth > 10 && currentLevel < levels.length - 1) {
+            // High buffer, can increase quality
+            const newLevel = Math.min(levels.length - 1, currentLevel + 1);
+            hls.nextLevel = newLevel;
+          }
+        }
+      } catch (e) {
+        console.error(`Buffer monitoring error for ${uidd}:`, e);
+      }
+    }, this.BUFFER_HEALTH_CHECK_INTERVAL);
+    
+    // Store monitoring interval for cleanup
+    this.streamTimeouts.set(`${uidd}_monitor`, monitoringInterval);
+  }
+
+  stopBufferHealthMonitoring(uidd) {
+    const monitoringInterval = this.streamTimeouts.get(`${uidd}_monitor`);
+    if (monitoringInterval) {
+      clearInterval(monitoringInterval);
+      this.streamTimeouts.delete(`${uidd}_monitor`);
+    }
+  }
+
+  loadCameraOrder() {
+    // Load saved camera order from localStorage
+    const savedOrder = localStorage.getItem('videoloft_camera_order');
+    if (savedOrder) {
+      try {
+        const orderArray = JSON.parse(savedOrder);
+        // Reorder cameras array based on saved order
+        const reorderedCameras = [];
+        orderArray.forEach(uidd => {
+          const camera = this.cameras.find(cam => cam.uidd === uidd);
+          if (camera) {
+            reorderedCameras.push(camera);
+          }
+        });
+        // Add any new cameras that weren't in the saved order
+        this.cameras.forEach(camera => {
+          if (!orderArray.includes(camera.uidd)) {
+            reorderedCameras.push(camera);
+          }
+        });
+        this.cameras = reorderedCameras;
+      } catch (e) {
+        console.warn('Failed to load camera order:', e);
+      }
+    }
+  }
+
+  saveCameraOrder() {
+    // Save current camera order to localStorage
+    const order = this.cameras.map(camera => camera.uidd);
+    localStorage.setItem('videoloft_camera_order', JSON.stringify(order));
+  }
+
+  setupDragAndDrop() {
+    const grid = document.querySelector(".camera-grid");
+    if (!grid || !window.Sortable) return;
+
+    // Disable drag-and-drop on mobile devices
+    if (window.innerWidth <= 768) {
+      grid.classList.remove('sortable-enabled');
+      return;
+    }
+
+    // Add sortable class for styling
+    grid.classList.add('sortable-enabled');
+
+    this.sortable = Sortable.create(grid, {
+      animation: 200,
+      ghostClass: 'sortable-ghost',
+      chosenClass: 'sortable-chosen',
+      dragClass: 'sortable-drag',
+      forceFallback: true,
+      fallbackClass: 'sortable-fallback',
+      fallbackOnBody: true,
+      swapThreshold: 0.8,
+      onStart: (evt) => {
+        // Pause all videos during drag
+        this.pauseAllStreams();
+        document.body.style.cursor = 'grabbing';
+      },
+      onEnd: (evt) => {
+        document.body.style.cursor = '';
+        
+        // Update cameras array order
+        const newOrder = Array.from(grid.children).map(card => {
+          const uidd = card.id.replace('card-', '');
+          return this.cameras.find(camera => camera.uidd === uidd);
+        }).filter(Boolean);
+
+        if (newOrder.length === this.cameras.length) {
+          this.cameras = newOrder;
+          this.saveCameraOrder();
+          
+          // Show success toast
+          this.showToast('Camera layout saved successfully!');
+          
+          // Restart streams after reordering
+          setTimeout(() => {
+            this.startStreams();
+          }, 500);
+        }
+      }
+    });
+  }
+
+  pauseAllStreams() {
+    // Pause all video streams
+    this.players.forEach((player, uidd) => {
+      const video = document.getElementById(`video-${uidd}`);
+      if (video && !video.paused) {
+        video.pause();
+      }
+    });
+  }
+
+  showToast(message, type = 'success') {
+    // Remove existing toast if any
+    const existingToast = document.querySelector('.toast-notification');
+    if (existingToast) {
+      existingToast.remove();
+    }
+
+    // Create new toast
+    const toast = document.createElement('div');
+    toast.className = `toast-notification ${type}`;
+    toast.innerHTML = `
+      <i class="fas fa-check-circle"></i>
+      <span>${message}</span>
+    `;
+
+    document.body.appendChild(toast);
+
+    // Show toast
+    setTimeout(() => {
+      toast.classList.add('show');
+    }, 100);
+
+    // Hide and remove toast after 3 seconds
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast);
+        }
+      }, 300);
+    }, 3000);
+  }
+
+  setupOverlayToggle() {
+    // Only enable tap-to-toggle on mobile
+    if (window.innerWidth > 768) return;
+    const cards = document.querySelectorAll('.camera-card');
+    cards.forEach(card => {
+      const header = card.querySelector('.camera-header');
+      if (!header) return;
+      let overlayVisible = false;
+      card.addEventListener('click', (e) => {
+        // Prevent toggling if fullscreen button is clicked
+        if (e.target.closest('.fullscreen-button')) return;
+        overlayVisible = !header.classList.contains('show-overlay');
+        document.querySelectorAll('.camera-header.show-overlay').forEach(h => h.classList.remove('show-overlay'));
+        if (overlayVisible) {
+          header.classList.add('show-overlay');
+        } else {
+          header.classList.remove('show-overlay');
+        }
+        e.stopPropagation();
+      });
+      // Hide overlay if clicking outside any card
+      document.body.addEventListener('click', (e) => {
+        if (!card.contains(e.target)) {
+          header.classList.remove('show-overlay');
+        }
+      });
+    });
+  }
+
+
+}
