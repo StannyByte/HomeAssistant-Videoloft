@@ -8,6 +8,10 @@ from .const import (
     DOMAIN,
 )
 
+# ----------------------------------------------------------
+# STORAGE CLASSES
+# ----------------------------------------------------------
+
 class TriggersStore:
     """Class to handle storage of LPR triggers."""
     def __init__(self, hass: HomeAssistant) -> None:

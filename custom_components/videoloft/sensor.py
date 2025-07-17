@@ -8,11 +8,11 @@ from datetime import timedelta, datetime, timezone
 from typing import Any, Dict, List, Optional
 import asyncio
 import json
-import openai
 import aiohttp
 
 from homeassistant.helpers.storage import Store
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.binary_sensor import BinarySensorEntity, BinarySensorDeviceClass
+from homeassistant.components.sensor import SensorEntity, SensorDeviceClass, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
@@ -23,11 +23,19 @@ from homeassistant.helpers.update_coordinator import (
     UpdateFailed,
 )
 from homeassistant.helpers import storage
+from homeassistant.util import dt as dt_util
 
 from .api import VideoloftAPI
 from .const import (
     DOMAIN,
     ICON_CAMERA,
+    ATTR_CLOUD_ADAPTER_VERSION,
+    ATTR_MAINSTREAM_LIVE,
+    ATTR_CLOUD_RECORDING_ENABLED,
+    ATTR_LAST_LOGGER,
+    CONNECTIVITY_UPDATE_INTERVAL,
+    FIRMWARE_UPDATE_INTERVAL,
+    STATUS_UPDATE_INTERVAL,
     ATTR_LICENSE_PLATE,
     ATTR_MAKE,
     ATTR_MODEL,
@@ -44,6 +52,10 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+# ----------------------------------------------------------
+# PLATFORM SETUP
+# ----------------------------------------------------------
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -51,6 +63,16 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Videoloft sensors based on a config entry."""
+    _LOGGER.debug("Setting up Videoloft sensors for entry %s", entry.entry_id)
+    
+    # Ensure domain data exists
+    if DOMAIN not in hass.data:
+        hass.data[DOMAIN] = {}
+        
+    if entry.entry_id not in hass.data[DOMAIN]:
+        _LOGGER.error("Entry data not found for %s", entry.entry_id)
+        return
+        
     api: VideoloftAPI = hass.data[DOMAIN][entry.entry_id]["api"]
     devices: Dict[str, Any] = hass.data[DOMAIN][entry.entry_id]["devices"]
 
@@ -58,20 +80,20 @@ async def async_setup_entry(
     async def async_update_status_data():
         """Fetch updated device info from the Videoloft API."""
         try:
-            device_info = await api.get_device_info()
-            if not device_info or "result" not in device_info:
-                raise UpdateFailed("Invalid device information received.")
-            return device_info
+            cameras_info = await api.get_cameras_info()
+            if not cameras_info: # Now expects a list, not a dict with "result"
+                raise UpdateFailed("Invalid camera information received.")
+            return cameras_info
         except Exception as e:
-            _LOGGER.error(f"Error fetching device info: {e}")
-            raise UpdateFailed(f"Error fetching device info: {e}")
+            _LOGGER.error(f"Error fetching camera info: {e}")
+            raise UpdateFailed(f"Error fetching camera info: {e}")
 
     status_coordinator = DataUpdateCoordinator(
         hass,
         _LOGGER,
         name="videoloft_status_sensors",
         update_method=async_update_status_data,
-        update_interval=timedelta(minutes=5),
+        update_interval=timedelta(hours=1),  # Reduced from 5 minutes to 1 hour
     )
 
     # Set up DataUpdateCoordinator for LPR Sensors
@@ -86,11 +108,11 @@ async def async_setup_entry(
     lpr_entities = []
 
     # Create Status Sensors for each camera
-    for owner_uid, owner_data in status_coordinator.data.get("result", {}).items():
-        for device_uid, device_data in owner_data.get("devices", {}).items():
-            uidd = f"{owner_uid}.{device_uid}"
-            status_sensor = VideoloftStatusSensor(status_coordinator, uidd, device_data)
-            status_entities.append(status_sensor)
+    # Iterate directly over the list of camera objects
+    for device_data in status_coordinator.data:
+        uidd = f"{device_data['uid']}.{device_data['id']}"
+        status_sensor = VideoloftStatusSensor(status_coordinator, uidd, device_data)
+        status_entities.append(status_sensor)
 
     # Create LPR Sensors (one per integration entry)
     lpr_sensor = VideoloftLPRSensor(lpr_coordinator, entry)
@@ -114,6 +136,7 @@ class LPRUpdateCoordinator(DataUpdateCoordinator):
         self.entry = entry
         self.matched_event: Optional[Dict[str, Any]] = None
         self._clear_task: Optional[asyncio.Task] = None  # Initialize the clear task
+        self._processed_vehicle_ids: List[str] = []
         self._store = storage.Store(
             hass,
             LPR_STORAGE_VERSION,
@@ -131,6 +154,33 @@ class LPRUpdateCoordinator(DataUpdateCoordinator):
         """Save triggers to persistent storage."""
         await self._store.async_save(triggers)
         self.hass.data[DOMAIN][self.entry.entry_id]["lpr_triggers"] = triggers
+
+    def _generate_lpr_recording_url(self, license_plate: str, timestamp: int, camera_uidd: str) -> str:
+        """Generate the recording URL for LPR detection notifications."""
+        try:
+            # Sanitize license plate for URL (remove spaces, convert to lowercase)
+            clean_plate = license_plate.strip().lower() if license_plate else "unknown"
+            
+            # Remove any potentially problematic characters from license plate
+            import re
+            clean_plate = re.sub(r'[^a-z0-9]', '', clean_plate) if clean_plate != "unknown" else "unknown"
+            
+            # Ensure timestamp is valid
+            valid_timestamp = timestamp if timestamp and timestamp > 0 else 0
+            
+            # Ensure camera UIDD is valid
+            valid_uidd = camera_uidd if camera_uidd else "unknown"
+            
+            # Generate URL in the expected format
+            recording_url = f"https://app.videoloft.com/vehicles/{clean_plate}?time={valid_timestamp}&uidd={valid_uidd}"
+            
+            _LOGGER.info(f"Generated LPR recording URL for plate '{license_plate}': {recording_url}")
+            return recording_url
+            
+        except Exception as e:
+            _LOGGER.error(f"Error generating LPR recording URL: {e}")
+            # Return a fallback URL with unknown values
+            return f"https://app.videoloft.com/vehicles/unknown?time=0&uidd=unknown"
 
     async def clear_matched_event(self, delay: int = 20):
         """Clear matched event after delay seconds."""
@@ -155,119 +205,90 @@ class LPRUpdateCoordinator(DataUpdateCoordinator):
                 return
 
             # Get all unique camera UIDs from triggers
-            camera_uids = set(trigger["uidd"] for trigger in lpr_triggers if "uidd" in trigger)
+            camera_uids = list(set(trigger["uidd"] for trigger in lpr_triggers if "uidd" in trigger))
             if not camera_uids:
                 _LOGGER.info("No camera UIDs found in LPR triggers.")
                 self.matched_event = None
                 return
 
-            # Track the last processed event time and IDs
-            last_event_time = self.hass.data[DOMAIN][self.entry.entry_id].get("last_event_time", None)
-            processed_event_ids = self.hass.data[DOMAIN][self.entry.entry_id].get("processed_event_ids", set())
+            # Calculate start time for the last 5 minutes
+            start_time_ms = int((datetime.now() - timedelta(minutes=5)).timestamp() * 1000)
 
-            for uidd in camera_uids:
-                owner_uid, device_uid = uidd.split('.')
-                device_data = (
-                    self.hass.data[DOMAIN][self.entry.entry_id].get("devices", {})
-                    .get("result", {})
-                    .get(owner_uid, {})
-                    .get("devices", {})
-                    .get(device_uid, {})
-                )
-                logger_server = device_data.get("logger")
-                if not logger_server:
-                    _LOGGER.warning(f"Logger server not found for camera {uidd}")
+            # Fetch vehicle detections directly
+            lpr_event_data = await api.get_vehicle_detections(camera_uids, start_time_ms, limit=10)
+
+            _LOGGER.info(f"Raw vehicle detections received: {json.dumps(lpr_event_data, indent=2)}")
+
+            if not lpr_event_data:
+                _LOGGER.info("No new vehicle detections found.")
+                self.matched_event = None
+                return
+
+            # Process each detection
+            for detection in lpr_event_data:
+                vehicle_id = detection.get("vehicleId")
+                if vehicle_id and vehicle_id in self._processed_vehicle_ids:
+                    _LOGGER.info(f"Skipping already processed vehicle ID: {vehicle_id}")
                     continue
+                lpr_info = api.parse_lpr_data([detection])  # parse_lpr_data expects a list
 
-                try:
-                    # Fetch the most recent event starting from last known time
-                    latest_event = await api.get_latest_event(logger_server, uidd, last_event_time)
-                    if not latest_event:
-                        _LOGGER.info(f"No new events for camera {uidd}")
-                        continue
+                if lpr_info:
+                    _LOGGER.info(f"Vehicle event detected: {lpr_info}")
+                    # Process matches...
+                    for trigger in lpr_triggers:
+                        vehicle_data = lpr_info
+                        matches = False  # Reset matches for each trigger
 
-                    event_id = latest_event.get("alert")
-                    event_start_time = latest_event.get("startt")
-                    if not event_id or not event_start_time:
-                        continue
+                        def normalize(value):
+                            return value.strip().lower() if isinstance(value, str) else value
 
-                    # Check if the event has already been processed
-                    if event_id in processed_event_ids:
-                        _LOGGER.info(f"Event {event_id} has already been processed. Skipping.")
-                        continue
+                        # Check license plate
+                        if trigger.get("license_plate"):
+                            if normalize(trigger["license_plate"]) == normalize(vehicle_data.get("license_plate", "")):
+                                matches = True
 
-                    # Store the new event ID and update last event time to prevent reprocessing
-                    processed_event_ids.add(event_id)
-                    self.hass.data[DOMAIN][self.entry.entry_id]["processed_event_ids"] = processed_event_ids
-                    self.hass.data[DOMAIN][self.entry.entry_id]["last_event_time"] = event_start_time
-
-                    # Poll the most recent event continuously for up to 90 seconds for LPR data
-                    _LOGGER.info(f"New event {event_id} detected. Polling for LPR data every 5 seconds (timeout: 90s). 🚀")
-                    max_wait = 90  # seconds
-                    poll_interval = 5  # seconds between checks
-                    lpr_event_data = None
-                    start_poll = datetime.now().timestamp()  # record polling start time
-                    while (datetime.now().timestamp() - start_poll) < max_wait:
-                        lpr_event_data = await api.get_event_vehicle_analytics(logger_server, uidd, event_id)
-                        if lpr_event_data and isinstance(lpr_event_data, list) and len(lpr_event_data) > 0:
-                            _LOGGER.info(f"LPR data found for event {event_id} after polling. ✅")
-                            break
-                        _LOGGER.debug(f"No LPR data yet for event {event_id}. Retrying in {poll_interval} seconds.")
-                        await asyncio.sleep(poll_interval)
-                    if not lpr_event_data:
-                        _LOGGER.info(f"No LPR data found for event {event_id} after 90 seconds. Backing off. ⏱️")
-                        continue  # Skip further processing of this event
-
-                    if not isinstance(lpr_event_data, list) or len(lpr_event_data) == 0:
-                        _LOGGER.info("No vehicle details found in this event. Skipping.")
-                        continue
-
-                    _LOGGER.info(f"Vehicle analytics data: {json.dumps(lpr_event_data, indent=2)}")
-                    lpr_info = api.parse_lpr_data(lpr_event_data)
-
-                    if lpr_info:
-                        _LOGGER.info(f"Vehicle event detected: {lpr_info}")
-                        # Process matches...
-                        for trigger in lpr_triggers:
-                            vehicle_data = lpr_info
-                            matches = False  # Reset matches for each trigger
-
-                            def normalize(value):
-                                return value.strip().lower() if isinstance(value, str) else value
-
-                            # Check license plate
-                            if trigger.get("license_plate"):
-                                if normalize(trigger["license_plate"]) == normalize(vehicle_data.get("license_plate", "")):
+                        # If no license plate match, check make, model, and color
+                        if not matches:
+                            make_trigger = normalize(trigger.get("make", ""))
+                            model_trigger = normalize(trigger.get("model", ""))
+                            color_trigger = normalize(trigger.get("color", ""))
+                            if make_trigger and model_trigger and color_trigger:
+                                if (make_trigger == normalize(vehicle_data.get("make", "")) and
+                                    model_trigger == normalize(vehicle_data.get("model", "")) and
+                                    color_trigger == normalize(vehicle_data.get("color", ""))):
                                     matches = True
 
-                            # If no license plate match, check make, model, and color
-                            if not matches:
-                                make_trigger = normalize(trigger.get("make", ""))
-                                model_trigger = normalize(trigger.get("model", ""))
-                                color_trigger = normalize(trigger.get("color", ""))
-                                if make_trigger and model_trigger and color_trigger:
-                                    if (make_trigger == normalize(vehicle_data.get("make", "")) and
-                                        model_trigger == normalize(vehicle_data.get("model", "")) and
-                                        color_trigger == normalize(vehicle_data.get("color", ""))):
-                                        matches = True
+                        if matches:
+                            # Generate the recording URL using detection data
+                            recording_url = self._generate_lpr_recording_url(
+                                license_plate=vehicle_data.get("license_plate", ""),
+                                timestamp=vehicle_data.get("timestamp", 0),
+                                camera_uidd=trigger["uidd"]
+                            )
+                            
+                            # Store the matched event details
+                            self.matched_event = {
+                                "license_plate": vehicle_data.get("license_plate", ""),
+                                "make": vehicle_data.get("make", ""),
+                                "model": vehicle_data.get("model", ""),
+                                "color": vehicle_data.get("color", ""),
+                                "timestamp": vehicle_data.get("timestamp"),
+                                "alertid": vehicle_data.get("alertid"),
+                                "direction": vehicle_data.get("direction", "unknown"),
+                                "recording_url": recording_url
+                            }
+                            self.async_set_updated_data(self.matched_event)
+                            _LOGGER.info(f"LPR trigger match found! Trigger: {trigger}")
+                            _LOGGER.info(f"Generated notification with URL: {recording_url}")
 
-                            if matches:
-                                # Store the matched event details
-                                self.matched_event = {
-                                    "license_plate": vehicle_data.get("license_plate", ""),
-                                    "make": vehicle_data.get("make", ""),
-                                    "model": vehicle_data.get("model", ""),
-                                    "color": vehicle_data.get("color", ""),
-                                    "timestamp": vehicle_data.get("timestamp"),
-                                    "alertid": vehicle_data.get("alertid"),
-                                    "direction": vehicle_data.get("direction", "unknown")
-                                }
-                                self.async_set_updated_data(self.matched_event)
-                                _LOGGER.info(f"Match found with trigger: {trigger}")
-
-                                # Fetch and save the LPR event thumbnail using the same method as AI search
-                                event_id = str(vehicle_data.get("alertid"))
-                                thumbnail_image = await api.download_event_thumbnail(logger_server, uidd, event_id)
+                            # Fetch and save the LPR event thumbnail
+                            if detection.get("uid") and detection.get("deviceId") and detection.get("stillTimeMs") and detection.get("vehicleId"):
+                                thumbnail_image = await api.get_lpr_event_thumbnail(
+                                    str(detection["uid"]),
+                                    str(detection["deviceId"]),
+                                    str(detection["stillTimeMs"]),
+                                    str(detection["vehicleId"])
+                                )
                                 if thumbnail_image:
                                     thumbnail_filename = "/config/www/lpr.jpg"
                                     with open(thumbnail_filename, "wb") as f:
@@ -275,27 +296,63 @@ class LPRUpdateCoordinator(DataUpdateCoordinator):
                                     _LOGGER.info(f"LPR event thumbnail saved to {thumbnail_filename}")
                                     self.matched_event["lpr_thumbnail_path"] = thumbnail_filename
                                 else:
-                                    _LOGGER.error(f"Failed to fetch LPR event thumbnail for event {event_id}")
+                                    _LOGGER.error(f"Failed to fetch LPR event thumbnail for event {detection.get('eventId')}")
+                            else:
+                                _LOGGER.error(f"Missing data required to fetch LPR event thumbnail for event {detection.get('eventId')}")
 
-                                # Cancel any existing clear task and schedule clearing of the matched event state
-                                if self._clear_task and not self._clear_task.done():
-                                    self._clear_task.cancel()
-                                    try:
-                                        await self._clear_task
-                                    except asyncio.CancelledError:
-                                        pass  # Expected when canceling
-                                self._clear_task = self.hass.loop.create_task(self.clear_matched_event(delay=10))
-                                break  # Exit trigger loop after match
+                            # Cancel any existing clear task and schedule clearing of the matched event state
+                            if self._clear_task and not self._clear_task.done():
+                                self._clear_task.cancel()
+                                try:
+                                    await self._clear_task
+                                except asyncio.CancelledError:
+                                    pass  # Expected when canceling
+                            self._clear_task = self.hass.loop.create_task(self.clear_matched_event(delay=10))
 
-                except Exception as e:
-                    _LOGGER.error(f"Error processing camera {uidd}: {e}")
-                    continue
+                            # Add vehicleId to processed list and limit size
+                            if vehicle_id:
+                                self._processed_vehicle_ids.append(vehicle_id)
+                                if len(self._processed_vehicle_ids) > 100:
+                                    self._processed_vehicle_ids.pop(0)
+
+                            break  # Exit trigger loop after match
+
+            # If no match found after processing all detections, clear the matched event
+            if not self.matched_event:
+                self.matched_event = None
+                self.async_set_updated_data(self.matched_event)
 
         except Exception as e:
             _LOGGER.error(f"Error in LPR update: {e}")
             self.matched_event = None
             import traceback
             _LOGGER.error(f"Traceback: {traceback.format_exc()}")
+
+    async def async_cleanup(self):
+        """Clean up coordinator resources."""
+        try:
+            _LOGGER.debug("Cleaning up LPR coordinator...")
+            
+            # Cancel any running clear task
+            if self._clear_task and not self._clear_task.done():
+                self._clear_task.cancel()
+                try:
+                    await self._clear_task
+                except asyncio.CancelledError:
+                    pass
+                    
+            # Clear state
+            self.matched_event = None
+            self._processed_vehicle_ids = []
+            
+            _LOGGER.debug("LPR coordinator cleanup completed")
+            
+        except Exception as e:
+            _LOGGER.error("Error during LPR coordinator cleanup: %s", e)
+
+# ----------------------------------------------------------
+# SENSOR ENTITY CLASSES
+# ----------------------------------------------------------
 
 class VideoloftStatusSensor(CoordinatorEntity, SensorEntity):
     """Representation of a Videoloft status sensor."""
@@ -360,12 +417,12 @@ class VideoloftStatusSensor(CoordinatorEntity, SensorEntity):
         """Update the sensor data."""
         await self.coordinator.async_request_refresh()
         # Update device_data with the latest information
-        for owner_uid, owner_data in self.coordinator.data.get("result", {}).items():
-            for device_uid, device_data in owner_data.get("devices", {}).items():
-                uidd = f"{owner_uid}.{device_uid}"
-                if uidd == self.uidd:
-                    self.device_data = device_data
-                    break
+        # Iterate directly over the list of camera objects
+        for device_data in self.coordinator.data:
+            uidd = f"{device_data['uid']}.{device_data['id']}"
+            if uidd == self.uidd:
+                self.device_data = device_data
+                break
 
 
 class VideoloftLPRSensor(CoordinatorEntity, SensorEntity):
@@ -406,3 +463,14 @@ class VideoloftLPRSensor(CoordinatorEntity, SensorEntity):
                 ATTR_RECORDING_URL: self.coordinator.matched_event.get(ATTR_RECORDING_URL)
             }
         return {}
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Called when entity will be removed from hass."""
+        _LOGGER.debug("Cleaning up LPR sensor entity")
+        
+        # Clean up coordinator if it has cleanup method
+        if hasattr(self.coordinator, 'async_cleanup'):
+            try:
+                await self.coordinator.async_cleanup()
+            except Exception as e:
+                _LOGGER.debug("Error during LPR sensor cleanup: %s", e)

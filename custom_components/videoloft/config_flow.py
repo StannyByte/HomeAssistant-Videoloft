@@ -5,13 +5,13 @@ from __future__ import annotations
 
 import logging
 import voluptuous as vol
-
 from aiohttp import ClientError
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import storage
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
+from homeassistant.helpers import config_validation as cv
 
 from .const import (
     DOMAIN,
@@ -19,16 +19,14 @@ from .const import (
     LPR_STORAGE_KEY,
     LPR_TRIGGER_STORAGE_KEY,
 )
-from .api import VideoloftAPI
+from .api import VideoloftAPI, VideoloftApiClientError, VideoloftApiAuthError
 
 _LOGGER = logging.getLogger(__name__)
 
-# Define the storage schema for LPR triggers
-LPR_TRIGGERS_STORAGE_KEY = "lpr_triggers"
-LPR_TRIGGERS_STORAGE_VERSION = 1
+# ----------------------------------------------------------
+# CONFIG FLOW CLASS
+# ----------------------------------------------------------
 
-LPR_STORAGE_VERSION = 1
-LPR_STORAGE_KEY = "videoloft_lpr_triggers"
 
 class VideoloftConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Videoloft."""
@@ -53,19 +51,25 @@ class VideoloftConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
             try:
                 await self.api.authenticate()
-            except ClientError as e:
-                _LOGGER.error(f"Network error during authentication: {e}")
-                errors["base"] = "cannot_connect"
-            except Exception as e:
+            except VideoloftApiAuthError as e:
                 _LOGGER.error(f"Authentication failed: {e}")
                 errors["base"] = "invalid_auth"
-
+            except (VideoloftApiClientError, ClientError) as e:
+                _LOGGER.error(f"Cannot connect: {e}")
+                errors["base"] = "cannot_connect"
+            except Exception as e:
+                _LOGGER.error(f"An unexpected error occurred: {e}")
+                errors["base"] = "unknown"
+            finally:
+                if self.api:
+                    await self.api.close() # Ensure session is closed even on error
+            
             if not errors:
                 # Initialize LPR triggers storage
                 try:
                     store = storage.Store(
                         self.hass,
-                        LPR_TRIGGERS_STORAGE_VERSION,
+                        LPR_STORAGE_VERSION,
                         f"{DOMAIN}_lpr_triggers_{user_input[CONF_EMAIL]}"
                     )
                     await store.async_save([])  # Initialize with empty list
@@ -94,6 +98,26 @@ class VideoloftConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Get the options flow for this handler."""
         return VideoloftOptionsFlowHandler(config_entry)
 
+    async def async_step_unload(self, user_input=None) -> FlowResult:
+        """Handle unloading of the integration."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data={})
+        
+        return self.async_show_form(
+            step_id="unload",
+            data_schema=vol.Schema({}),
+            description_placeholders={"name": self._get_entry_title()},
+        )
+        
+    def _get_entry_title(self) -> str:
+        """Get the title for the current entry."""
+        if hasattr(self, '_entry_data') and CONF_EMAIL in self._entry_data:
+            return self._entry_data[CONF_EMAIL]
+        return "Videoloft Integration"
+
+# ----------------------------------------------------------
+# OPTIONS FLOW CLASS
+# ----------------------------------------------------------
 
 class VideoloftOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle an option flow for Videoloft."""
