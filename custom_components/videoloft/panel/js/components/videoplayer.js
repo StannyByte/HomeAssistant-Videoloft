@@ -592,6 +592,11 @@ class VideoloftPlayer {
               
               if (videoElement.currentTime > 0 && videoElement.readyState >= 3) {
                 transitionComplete = true;
+                
+                // Reset media recovery counter on successful playback
+                const mediaErrorKey = `${camera.uidd}_media_recovery`;
+                this.streamAttempts.delete(mediaErrorKey);
+                
                 if (thumbnail) {
                   thumbnail.style.display = "none";
                 }
@@ -642,6 +647,11 @@ class VideoloftPlayer {
             // Desktop behavior - use the standard playing event
             videoElement.addEventListener('playing', () => {
               console.log(`Video playing for ${camera.name}`);
+              
+              // Reset media recovery counter on successful playback
+              const mediaErrorKey = `${camera.uidd}_media_recovery`;
+              this.streamAttempts.delete(mediaErrorKey);
+              
               if (thumbnail) {
                 thumbnail.style.display = "none";
               }
@@ -683,7 +693,7 @@ class VideoloftPlayer {
         console.error(`HLS error for ${camera.name}:`, { type, fatal, details, code: data.response?.code });
         
         if (fatal) {
-          this.handleFatalError(hls, camera, videoElement, spinner, thumbnail, errorElement, type, retryCount);
+          this.handleFatalError(hls, camera, videoElement, spinner, thumbnail, errorElement, type, retryCount, data);
         } else {
           // Handle non-fatal errors
           this.handleNonFatalError(hls, camera, data);
@@ -704,7 +714,7 @@ class VideoloftPlayer {
     }
   }
 
-  handleFatalError(hls, camera, videoElement, spinner, thumbnail, errorElement, errorType, retryCount) {
+  handleFatalError(hls, camera, videoElement, spinner, thumbnail, errorElement, errorType, retryCount, data) {
     switch (errorType) {
       case Hls.ErrorTypes.NETWORK_ERROR:
         if (retryCount < this.MAX_LOAD_RETRIES) {
@@ -715,8 +725,36 @@ class VideoloftPlayer {
         }
         break;
       case Hls.ErrorTypes.MEDIA_ERROR:
-        console.warn(`Media error on ${camera.name}, attempting recovery...`);
-        hls.recoverMediaError();
+        const { details } = data || {};
+        
+        // For bufferAppendError, skip recovery and immediately restart (like browser refresh)
+        if (details === 'bufferAppendError') {
+          console.warn(`Buffer append error on ${camera.name}, performing immediate clean restart...`);
+          this.restartStreamWithThumbnailPreservation(camera, videoElement, spinner, thumbnail, errorElement);
+          return;
+        }
+        
+        // For other media errors, try limited recovery attempts
+        const mediaErrorKey = `${camera.uidd}_media_recovery`;
+        const mediaRecoveryAttempts = this.streamAttempts.get(mediaErrorKey) || 0;
+        
+        if (mediaRecoveryAttempts < 2) {
+          // Try HLS built-in recovery first (up to 2 times for non-buffer errors)
+          console.warn(`Media error on ${camera.name}, attempting recovery (${mediaRecoveryAttempts + 1}/2)...`);
+          this.streamAttempts.set(mediaErrorKey, mediaRecoveryAttempts + 1);
+          try {
+            hls.recoverMediaError();
+          } catch (e) {
+            console.error(`Media recovery failed for ${camera.name}:`, e);
+            // Force stream restart if recovery throws an error
+            this.restartStreamWithThumbnailPreservation(camera, videoElement, spinner, thumbnail, errorElement);
+          }
+        } else {
+          // Recovery attempts exhausted, restart stream completely
+          console.warn(`Media recovery exhausted for ${camera.name}, restarting stream...`);
+          this.streamAttempts.delete(mediaErrorKey);
+          this.restartStreamWithThumbnailPreservation(camera, videoElement, spinner, thumbnail, errorElement);
+        }
         break;
       default:
         if (retryCount < this.MAX_LOAD_RETRIES) {
@@ -756,6 +794,11 @@ class VideoloftPlayer {
           
           if (videoElement.currentTime > 0 && videoElement.readyState >= 3) {
             transitionComplete = true;
+            
+            // Reset media recovery counter on successful playback
+            const mediaErrorKey = `${camera.uidd}_media_recovery`;
+            this.streamAttempts.delete(mediaErrorKey);
+            
             if (thumbnail) {
               thumbnail.style.display = "none";
             }
@@ -806,6 +849,11 @@ class VideoloftPlayer {
         // Desktop behavior - use the standard playing event
         videoElement.addEventListener('playing', () => {
           console.log(`Native video playing for ${camera.name}`);
+          
+          // Reset media recovery counter on successful playback
+          const mediaErrorKey = `${camera.uidd}_media_recovery`;
+          this.streamAttempts.delete(mediaErrorKey);
+          
           if (thumbnail) {
             thumbnail.style.display = "none";
           }
@@ -834,6 +882,62 @@ class VideoloftPlayer {
     }
   }
 
+  restartStreamWithThumbnailPreservation(camera, videoElement, spinner, thumbnail, errorElement) {
+    console.log(`Performing browser-refresh style restart for ${camera.name}`);
+    
+    // Ensure thumbnail remains visible during restart (like when browser is loading)
+    if (thumbnail) {
+      thumbnail.style.display = "block";
+      thumbnail.style.opacity = "1";
+      thumbnail.style.zIndex = "10";
+    }
+    
+    // Complete video element reset (like browser refresh)
+    if (videoElement) {
+      // Force complete reset of video element state
+      videoElement.pause();
+      videoElement.src = "";
+      videoElement.load(); // This is key - resets the video element completely
+      videoElement.style.display = "none";
+      
+      // Remove all event listeners by cloning the element (nuclear option)
+      const newVideoElement = videoElement.cloneNode(true);
+      videoElement.parentNode.replaceChild(newVideoElement, videoElement);
+      
+      if (this.isMobile) {
+        newVideoElement.style.visibility = "hidden";
+        newVideoElement.classList.remove('mobile-ready');
+      }
+    }
+    
+    // Show spinner briefly to indicate restart
+    if (spinner) {
+      spinner.style.display = "block";
+    }
+    
+    // Clean up current player completely
+    this.cleanupPlayer(camera.uidd);
+    
+    // Clear any error states
+    if (errorElement) {
+      errorElement.style.display = "none";
+    }
+    
+    // Short delay to ensure clean state, then restart (like browser loading time)
+    setTimeout(() => {
+      const attempts = this.streamAttempts.get(camera.uidd) || 0;
+      if (attempts < this.MAX_LOAD_RETRIES) {
+        this.streamAttempts.set(camera.uidd, attempts + 1);
+        // Get the new video element after cloning
+        const freshVideoElement = document.getElementById(`video-${camera.uidd}`);
+        this.initializeStream(camera, freshVideoElement, spinner, thumbnail, errorElement, attempts + 1);
+      } else {
+        // Max retries reached, fall back to timeout handling
+        this.handleStreamTimeout(camera, newVideoElement || videoElement, spinner, thumbnail, errorElement);
+      }
+    }, this.RETRY_DELAY);
+  }
+
   reloadStream(uidd) {
     const camera = this.cameras.find((cam) => cam.uidd === uidd);
     if (!camera) return;
@@ -849,6 +953,11 @@ class VideoloftPlayer {
   cleanupPlayer(uidd) {
     this.clearStreamTimeout(uidd);
     this.stopBufferHealthMonitoring(uidd);
+    
+    // Clean up media recovery tracking
+    const mediaErrorKey = `${uidd}_media_recovery`;
+    this.streamAttempts.delete(mediaErrorKey);
+    
     const player = this.players.get(uidd);
     if (player) {
       if (player instanceof Hls) {

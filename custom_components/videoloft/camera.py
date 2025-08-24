@@ -92,6 +92,8 @@ class VideoloftCamera(Camera):
         self.logger_server = device_data.get("logger")
         self.wowza = None
         self.live_stream_name = None
+        self._keep_alive_task = None
+        self._streaming_paused = False  # Add global streaming control
 
         # Start the initialization process
         if self.hass:
@@ -101,6 +103,12 @@ class VideoloftCamera(Camera):
         """Initialize the camera stream."""
         if not self.logger_server:
             _LOGGER.error(f"No logger server found for {self._attr_name}")
+            return
+
+        # Check global streaming state before starting
+        if await self._is_global_streaming_paused():
+            _LOGGER.info(f"Global streaming paused, skipping stream initialization for {self._attr_name}")
+            self._streaming_paused = True
             return
 
         # Start keep-alive task only if not already running
@@ -173,6 +181,19 @@ class VideoloftCamera(Camera):
 
         while True:
             try:
+                # Check if global streaming is paused
+                if await self._is_global_streaming_paused():
+                    _LOGGER.debug(f"Global streaming paused, stopping keep-alive for {self._attr_name}")
+                    self._streaming_paused = True
+                    self._stream_available = False
+                    self.async_write_ha_state()
+                    return  # Exit the keep-alive loop
+                
+                # Resume from paused state if needed
+                if self._streaming_paused:
+                    _LOGGER.info(f"Resuming streaming for {self._attr_name}")
+                    self._streaming_paused = False
+
                 # Send live command with timeout
                 await asyncio.wait_for(
                     self.api.send_live_command(self.uidd, self.logger_server),
@@ -232,6 +253,10 @@ class VideoloftCamera(Camera):
 
     async def stream_source(self) -> Optional[str]:
         """Return the current stream source URL."""
+        # Return None if streaming is paused
+        if self._streaming_paused or await self._is_global_streaming_paused():
+            return None
+            
         # Only return stream URL if it's actually available
         if not self._stream_available:
             return None
@@ -247,8 +272,8 @@ class VideoloftCamera(Camera):
 
     @property
     def available(self) -> bool:
-        """Return True if the camera stream is available."""
-        return self._stream_available
+        """Return True if the camera stream is available and not paused."""
+        return self._stream_available and not self._streaming_paused
 
     async def async_camera_image(self, width: Optional[int] = None, height: Optional[int] = None) -> Optional[bytes]:
         """Return camera image for Home Assistant with enhanced caching and robust error handling."""
@@ -304,6 +329,14 @@ class VideoloftCamera(Camera):
 
     async def reinitialize_stream(self) -> None:
         """Force reinitialization of the stream."""
+        # Check if global streaming is paused
+        if await self._is_global_streaming_paused():
+            _LOGGER.debug(f"Global streaming paused, skipping stream reinitialize for {self._attr_name}")
+            self._streaming_paused = True
+            self._stream_available = False
+            self.async_write_ha_state()
+            return
+            
         _LOGGER.warning("Reinitializing stream for %s", self._attr_name)
         self._stream_available = False
         self.async_write_ha_state()  # Update Home Assistant immediately
@@ -311,12 +344,57 @@ class VideoloftCamera(Camera):
 
     async def force_stream_refresh(self) -> None:
         """Force refresh of stream availability state."""
+        # Check if global streaming is paused
+        if await self._is_global_streaming_paused():
+            _LOGGER.debug(f"Global streaming paused, skipping stream refresh for {self._attr_name}")
+            return
+            
         _LOGGER.info("Forcing stream refresh for %s", self._attr_name)
         success = await self.update_stream_url()
         if success:
             _LOGGER.info("Stream refresh successful for %s", self._attr_name)
         else:
             _LOGGER.warning("Stream refresh failed for %s", self._attr_name)
+
+    async def _is_global_streaming_paused(self) -> bool:
+        """Check if global streaming is paused."""
+        try:
+            from .storage import GlobalStreamStateStore
+            state_store = GlobalStreamStateStore(self.hass)
+            state = await state_store.async_load()
+            return not state.get("enabled", True)
+        except Exception as e:
+            _LOGGER.debug(f"Error checking global streaming state: {e}")
+            return False  # Default to enabled if we can't check
+
+    async def pause_streaming(self) -> None:
+        """Pause streaming for this camera."""
+        _LOGGER.info(f"Pausing streaming for {self._attr_name}")
+        self._streaming_paused = True
+        
+        # Cancel the keep-alive task
+        if hasattr(self, '_keep_alive_task') and self._keep_alive_task and not self._keep_alive_task.done():
+            self._keep_alive_task.cancel()
+            try:
+                await self._keep_alive_task
+            except asyncio.CancelledError:
+                pass
+            _LOGGER.debug(f"Keep-alive task cancelled for {self._attr_name}")
+        
+        # Mark stream as unavailable
+        self._stream_available = False
+        self.async_write_ha_state()
+
+    async def resume_streaming(self) -> None:
+        """Resume streaming for this camera."""
+        _LOGGER.info(f"Resuming streaming for {self._attr_name}")
+        self._streaming_paused = False
+        
+        # Restart the keep-alive task
+        if not hasattr(self, '_keep_alive_task') or self._keep_alive_task is None or self._keep_alive_task.done():
+            if self.hass:
+                self._keep_alive_task = self.hass.loop.create_task(self.keep_stream_alive())
+                _LOGGER.debug(f"Keep-alive task restarted for {self._attr_name}")
 
     @property
     def extra_state_attributes(self) -> Dict[str, Any]:
@@ -353,9 +431,17 @@ class VideoloftCamera(Camera):
         """Called when entity will be removed from hass."""
         _LOGGER.debug("Cleaning up camera entity: %s", self._attr_name)
         
-        # Stop the keep-alive task by canceling current tasks
+        # Stop the keep-alive task properly
+        if hasattr(self, '_keep_alive_task') and self._keep_alive_task and not self._keep_alive_task.done():
+            self._keep_alive_task.cancel()
+            try:
+                await self._keep_alive_task
+            except asyncio.CancelledError:
+                pass
+            _LOGGER.debug("Keep-alive task cancelled for camera %s", self._attr_name)
+        
+        # Legacy cleanup for any other tasks (fallback)
         try:
-            # Get all running tasks for this entity
             current_task = asyncio.current_task()
             all_tasks = [task for task in asyncio.all_tasks() if task != current_task]
             
@@ -363,7 +449,7 @@ class VideoloftCamera(Camera):
             for task in all_tasks:
                 if hasattr(task, '_context') and self.uidd in str(task):
                     task.cancel()
-                    _LOGGER.debug("Cancelled task for camera %s", self._attr_name)
+                    _LOGGER.debug("Cancelled related task for camera %s", self._attr_name)
                     
         except Exception as e:
             _LOGGER.debug("Error during camera cleanup: %s", e)
@@ -424,7 +510,17 @@ class VideoloftCameraStreamView(HomeAssistantView):
             (entity for entity in self.hass.data["camera"].entities if getattr(entity, "uidd", None) == uidd),
             None,
         )
-        if not camera_entity or not camera_entity._stream_url:
+        if not camera_entity:
+            _LOGGER.error(f"Camera entity not found for {uidd}")
+            return web.HTTPInternalServerError()
+            
+        # Check if this camera is paused or global streaming is disabled
+        if (getattr(camera_entity, '_streaming_paused', False) or 
+            await camera_entity._is_global_streaming_paused()):
+            _LOGGER.debug(f"Camera {uidd} streaming is paused, returning service unavailable")
+            return web.HTTPServiceUnavailable(text="Camera streaming paused")
+            
+        if not camera_entity._stream_url:
             _LOGGER.error(f"Unable to get stream URL for {uidd}")
             return web.HTTPInternalServerError()
 
@@ -448,6 +544,11 @@ class VideoloftCameraStreamView(HomeAssistantView):
                     else:
                         return await self.stream_segment_optimized(request, upstream_resp)
                 elif upstream_resp.status == 404:
+                    # Check if global streaming is paused before attempting reinitialize
+                    if await camera_entity._is_global_streaming_paused():
+                        _LOGGER.debug(f"Stream 404 for camera {uidd} but global streaming is paused - not reinitializing")
+                        return web.HTTPServiceUnavailable(text="Global streaming paused")
+                    
                     _LOGGER.warning(f"Received 404 for stream of camera {uidd}. Reinitializing stream.")
                     await camera_entity.reinitialize_stream()
                     # Also trigger a quick refresh attempt

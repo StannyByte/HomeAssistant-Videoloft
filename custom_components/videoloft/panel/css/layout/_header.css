@@ -28,6 +28,75 @@
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
+  position: relative; /* Allow absolute positioning of controls */
+}
+
+/* Header Controls (positioned absolutely on the right) */
+.header-controls {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  z-index: 10;
+}
+
+/* Stream Toggle Button */
+.stream-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  min-width: 100px;
+  justify-content: center;
+  height: 36px;
+}
+
+.stream-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--border-accent);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.stream-toggle-btn.active {
+  background: rgba(52, 202, 198, 0.15);
+  border-color: var(--turquoise);
+  color: var(--turquoise);
+}
+
+.stream-toggle-btn.disabled {
+  background: rgba(236, 33, 68, 0.15);
+  border-color: rgba(236, 33, 68, 0.3);
+  color: #ec2144;
+}
+
+.stream-toggle-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.stream-toggle-btn i {
+  font-size: var(--text-base);
+  transition: all var(--transition-base);
+}
+
+.stream-toggle-text {
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 
 .logo-section {
@@ -179,6 +248,30 @@
   /* Hide logo on mobile to focus on navigation */
   .logo-section {
     display: none;
+  }
+
+  /* Mobile header controls positioning */
+  .header-controls {
+    position: absolute;
+    right: var(--space-2);
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  /* Mobile stream toggle button - more compact */
+  .stream-toggle-btn {
+    min-width: 60px;
+    padding: var(--space-2) var(--space-3);
+    height: 32px;
+    font-size: var(--text-xs);
+  }
+
+  .stream-toggle-text {
+    display: none; /* Hide text on mobile, show only icon */
+  }
+
+  .stream-toggle-btn i {
+    font-size: var(--text-sm);
   }
 
   .top-nav ul {

@@ -103,6 +103,7 @@
   left: 0;
   z-index: 10;
   background: var(--ha-bg-secondary);
+  border-radius: var(--radius-lg); /* Consistent border radius for all thumbnails */
 }
 
 .video-container .thumbnail.loading {
@@ -453,7 +454,7 @@
     margin-bottom: 0 !important;
     width: 100% !important;
     max-width: 100vw !important;
-    padding: 0 !important;
+    padding: var(--space-2) !important; /* Consistent with responsive.css mobile grid padding */
     justify-items: stretch !important;
     align-items: stretch !important;
   }
@@ -462,7 +463,7 @@
     margin-right: 0 !important;
     margin-top: 0 !important;
     margin-bottom: 0 !important;
-    border-radius: 0 !important;
+    border-radius: var(--radius-lg) !important; /* Subtle rounded corners for polished mobile UI */
     width: 100% !important;
     max-width: 100vw !important;
     min-width: 0 !important;
@@ -471,14 +472,15 @@
     box-sizing: border-box !important;
   }
   .video-container {
-    border-radius: 0 !important;
+    border-radius: var(--radius-lg) !important; /* Match camera card radius */
     padding: 0 !important;
+    overflow: hidden !important; /* Ensure video content respects rounded corners */
   }
   .camera-header {
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
-    border-radius: 0 !important;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg) !important; /* Rounded bottom corners */
     min-height: 32px !important;
     padding: var(--space-2) var(--space-3) !important;
     font-size: 0.85rem !important;

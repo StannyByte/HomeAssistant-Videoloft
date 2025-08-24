@@ -18,6 +18,8 @@ from homeassistant.components.websocket_api import (
     WebSocketCommandHandler,
     websocket_command,
 )
+from datetime import datetime
+from .storage import GlobalStreamStateStore
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -1426,3 +1428,155 @@ class GeminiQuotaView(HomeAssistantView):
         except Exception as e:
             _LOGGER.error(f"Error in quota management: {e}")
             return web.json_response({"error": str(e)}, status=500)
+
+
+class GlobalStreamStateView(HomeAssistantView):
+    """Handle global streaming state management."""
+
+    url = "/api/videoloft/global_stream_state"
+    name = "api:videoloft:global_stream_state"
+    requires_auth = False
+
+    def __init__(self, hass: HomeAssistant):
+        self.hass = hass
+        self._state_store = GlobalStreamStateStore(hass)
+
+    async def get(self, request: web.Request) -> web.Response:
+        """Handle GET request to retrieve current streaming state."""
+        try:
+            # Load current state from storage
+            state = await self._state_store.async_load()
+            
+            # Get camera count and actual streaming status
+            entry = get_entry(self.hass)
+            total_cameras = 0
+            active_streams = 0
+            
+            if entry:
+                cameras_info = self.hass.data[DOMAIN][entry.entry_id].get("devices", [])
+                total_cameras = len(cameras_info)
+                
+                # Count actually active streams by checking camera entities
+                camera_entities = []
+                # Get camera entities from the entity registry
+                from homeassistant.helpers import entity_registry as er
+                entity_registry = er.async_get(self.hass)
+                
+                for entity_entry in entity_registry.entities.values():
+                    if (entity_entry.domain == "camera" and 
+                        entity_entry.platform == DOMAIN):
+                        # Get the actual entity instance
+                        entity_id = entity_entry.entity_id
+                        camera_entity = self.hass.states.get(entity_id)
+                        if camera_entity and not getattr(camera_entity, '_streaming_paused', False):
+                            active_streams += 1
+                
+                # If global streaming is disabled, active streams should be 0
+                if not state.get("enabled", True):
+                    active_streams = 0
+            
+            response_data = {
+                "enabled": state.get("enabled", True),
+                "total_cameras": total_cameras,
+                "active_streams": active_streams,
+                "last_updated": state.get("last_updated")
+            }
+            
+            return web.json_response(response_data)
+            
+        except Exception as e:
+            _LOGGER.error("Error getting global stream state: %s", e)
+            return web.json_response({"error": str(e)}, status=500)
+
+    async def post(self, request: web.Request) -> web.Response:
+        """Handle POST request to update streaming state."""
+        try:
+            data = await request.json()
+            enabled = data.get("enabled")
+            
+            if enabled is None:
+                return web.json_response({"error": "'enabled' parameter is required"}, status=400)
+            
+            if not isinstance(enabled, bool):
+                return web.json_response({"error": "'enabled' must be a boolean"}, status=400)
+            
+            # Update state
+            state = {
+                "enabled": enabled,
+                "last_updated": datetime.utcnow().isoformat()
+            }
+            
+            # Save to storage
+            await self._state_store.async_save(state)
+            
+            # **CONTROL ACTUAL CAMERA STREAMING TASKS**
+            await self._control_camera_streaming(enabled)
+            
+            # Get camera count for response
+            entry = get_entry(self.hass)
+            total_cameras = 0
+            active_streams = 0
+            
+            if entry:
+                cameras_info = self.hass.data[DOMAIN][entry.entry_id].get("devices", [])
+                total_cameras = len(cameras_info)
+                if enabled:
+                    active_streams = total_cameras
+            
+            response_data = {
+                "enabled": enabled,
+                "total_cameras": total_cameras,
+                "active_streams": active_streams,
+                "last_updated": state["last_updated"]
+            }
+            
+            _LOGGER.info("Global streaming state updated: enabled=%s, cameras controlled=%d", enabled, total_cameras)
+            return web.json_response(response_data)
+            
+        except json.JSONDecodeError:
+            return web.json_response({"error": "Invalid JSON format"}, status=400)
+        except Exception as e:
+            _LOGGER.error("Error updating global stream state: %s", e)
+            return web.json_response({"error": str(e)}, status=500)
+    
+    async def _control_camera_streaming(self, enabled: bool) -> None:
+        """Control actual camera streaming tasks based on global state."""
+        try:
+            # Get all camera entities using the entity registry
+            from homeassistant.helpers import entity_registry as er
+            entity_registry = er.async_get(self.hass)
+            
+            camera_entities = []
+            for entity_entry in entity_registry.entities.values():
+                if (entity_entry.domain == "camera" and 
+                    entity_entry.platform == DOMAIN):
+                    # Get the actual entity instance from the entity component
+                    camera_component = self.hass.data.get("camera")
+                    if camera_component:
+                        entity = camera_component.get_entity(entity_entry.entity_id)
+                        if entity and hasattr(entity, "uidd"):
+                            camera_entities.append(entity)
+            
+            if not camera_entities:
+                _LOGGER.warning("No Videoloft camera entities found for streaming control")
+                return
+            
+            _LOGGER.info(f"Controlling streaming for {len(camera_entities)} cameras: enabled={enabled}")
+            
+            # Control each camera's streaming
+            control_tasks = []
+            for camera in camera_entities:
+                if enabled:
+                    # Resume streaming
+                    control_tasks.append(camera.resume_streaming())
+                else:
+                    # Pause streaming  
+                    control_tasks.append(camera.pause_streaming())
+            
+            # Execute all control tasks concurrently
+            if control_tasks:
+                await asyncio.gather(*control_tasks, return_exceptions=True)
+                _LOGGER.info(f"Streaming control completed for {len(control_tasks)} cameras")
+            
+        except Exception as e:
+            _LOGGER.error(f"Error controlling camera streaming: {e}")

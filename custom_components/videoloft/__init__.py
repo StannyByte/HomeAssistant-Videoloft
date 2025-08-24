@@ -31,7 +31,8 @@ from .views import (
     AIAnalysisView,
     AISearchView,
     VideoloftCameraDiagnosticView,
-    GeminiQuotaView
+    GeminiQuotaView,
+    GlobalStreamStateView
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -117,7 +118,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "ai_analysis": AIAnalysisView(hass),
         "ai_search": AISearchView(hass),
         "camera_diagnostic": VideoloftCameraDiagnosticView(hass),
-        "gemini_quota": GeminiQuotaView(hass)
+        "gemini_quota": GeminiQuotaView(hass),
+        "global_stream_state": GlobalStreamStateView(hass)
     }
     
     # ----------------------------------------------------------

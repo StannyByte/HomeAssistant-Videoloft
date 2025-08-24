@@ -48,6 +48,14 @@
                         </li>
                     </ul>
                 </nav>
+                
+                <!-- Stream Control Toggle Button -->
+                <div class="header-controls">
+                    <button id="globalStreamToggle" class="stream-toggle-btn" aria-label="Toggle camera streams" title="Streams Active - Click to pause">
+                        <i id="streamToggleIcon" class="fas fa-video"></i>
+                        <span id="streamToggleText" class="stream-toggle-text">Streams</span>
+                    </button>
+                </div>
             </div>
         </header>
 
@@ -323,6 +331,7 @@ mode: single</pre>
     <script src="/videoloft_panel/js/components/tabs.js"></script>
     <script src="/videoloft_panel/js/components/videoplayer.js"></script>
     <script src="/videoloft_panel/js/components/header_scroll.js"></script>
+    <script src="/videoloft_panel/js/components/header_stream_control.js"></script>
     <script src="/videoloft_panel/js/managers/lpr_manager.js"></script>
     <script src="/videoloft_panel/js/managers/ai_manager.js"></script>
     <script src="/videoloft_panel/js/main.js"></script>

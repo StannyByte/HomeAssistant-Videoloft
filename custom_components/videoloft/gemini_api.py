@@ -263,7 +263,7 @@ class GeminiAPI:
                     return None
 
                 base64_image = base64.b64encode(image_bytes).decode('utf-8')
-                url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+                url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent"
                 
                 data = {
                     "contents": [{
@@ -311,13 +311,9 @@ class GeminiAPI:
     def _get_analysis_prompt(self) -> str:
         """Get prompt for CCTV image analysis."""
         return (
-            "Analyze this CCTV footage image with maximum detail for security purposes. "
-            "Provide a comprehensive, factual description in ONE detailed paragraph. "
-            "Include ALL observable details about people (gender, age, clothing, actions), "
-            "vehicles (make, model, color, license plates), objects, environment, "
-            "time of day, weather, and specific actions being performed. "
-            "Use specific, searchable terms. Only describe what is clearly visible. "
-            "Do not use headings, bullet points, or markdown formatting."
+            "Describe this image in 2-3 sentences. "
+            "Include key details about people, vehicles, objects, and activities that are clearly visible. "
+            "Be factual and concise."
         )
 
     def _clean_description(self, description: Optional[str]) -> Optional[str]:
