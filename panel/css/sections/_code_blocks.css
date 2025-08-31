@@ -1,0 +1,276 @@
+/* Ensure code examples and automation examples span full width - Match logs styling */
+.code-block-container {
+  width: 100%;
+  position: relative;
+  background: transparent; /* Match logs transparent background */
+  border: none; /* Remove border like logs */
+  border-radius: 0; /* Remove border radius like logs */
+  padding: 0; /* Remove padding like logs */
+  overflow-x: auto;
+  box-shadow: none; /* Remove shadow like logs */
+  margin-top: var(--space-4);
+}
+
+.code-block-container pre {
+  margin: 0;
+  padding: var(--space-2) 0; /* Match logs padding */
+  font-family: 'JetBrains Mono', monospace;
+  font-size: var(--text-sm); /* Match logs font size */
+  line-height: 1.5;
+  color: var(--text-secondary); /* Match logs text color */
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  border-bottom: 1px solid var(--border-secondary); /* Match logs border style */
+}
+
+/* Enhanced Automation Examples Card */
+.automation-examples-card {
+  margin-top: var(--space-6);
+}
+
+.automation-examples-card h3 {
+  color: var(--text-primary);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  margin-bottom: var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Center the main header */
+  gap: var(--space-2);
+}
+
+.automation-examples-card h3 i {
+  color: var(--turquoise);
+}
+
+.automation-examples-card > p {
+  color: var(--text-secondary);
+  margin-bottom: var(--space-6);
+  font-size: var(--text-base);
+  text-align: center; /* Center the description text */
+}
+
+/* Individual Automation Example - Match logs styling */
+.automation-example {
+  margin-bottom: var(--space-8);
+  padding: 0; /* Remove padding like logs */
+  background: transparent; /* Match logs transparent background */
+  border: none; /* Remove border like logs */
+  border-radius: 0; /* Remove border radius like logs */
+  box-shadow: none; /* Remove shadow like logs */
+}
+
+.automation-example h4 {
+  color: var(--text-primary);
+  font-size: var(--text-md);
+  font-weight: 600;
+  margin: var(--space-4) 0 var(--space-3) 0; /* Add top margin to replace container padding */
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Center the example headers */
+  gap: var(--space-2);
+}
+
+.automation-example h4 i {
+  color: var(--turquoise);
+  font-size: var(--text-sm);
+}
+
+.automation-example > p {
+  color: var(--text-secondary);
+  margin-bottom: var(--space-4);
+  font-size: var(--text-sm);
+  text-align: center; /* Center the description text */
+}
+
+/* Code Block Wrapper for Copy Button */
+.code-block-wrapper {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+/* Code Block Styling - Match logs styling */
+.code-block {
+  background: transparent !important; /* Match logs transparent background */
+  border: none; /* Remove border like logs */
+  border-bottom: 1px solid var(--border-secondary); /* Match logs border style */
+  border-radius: 0; /* Remove border radius like logs */
+  padding: var(--space-2) 0; /* Match logs padding */
+  margin: 0;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace !important;
+  font-size: var(--text-sm); /* Match logs font size */
+  line-height: 1.6;
+  color: var(--text-secondary); /* Match logs text color */
+  overflow-x: auto;
+  white-space: pre;
+  word-wrap: normal;
+  max-height: 400px;
+  overflow-y: auto;
+  box-shadow: none; /* Remove shadow like logs */
+}
+
+/* Copy Button Enhancement - Clean, subtle styling */
+.copy-code-button {
+  position: absolute;
+  bottom: var(--space-2);
+  right: var(--space-2);
+  background-color: var(--ha-bg-elevated);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
+  z-index: 10;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  opacity: 0.7;
+}
+
+.copy-code-button:hover {
+  background-color: var(--turquoise);
+  border-color: var(--turquoise);
+  color: var(--ha-bg-primary);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+  opacity: 1;
+}
+
+.copy-code-button:active {
+  transform: translateY(0);
+}
+
+.copy-code-button i {
+  font-size: var(--text-sm);
+}
+
+/* Setup Notes Section */
+.automation-setup-notes {
+  margin-top: var(--space-6);
+  padding: var(--space-5);
+  background: var(--ha-bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--turquoise);
+}
+
+.automation-setup-notes h4 {
+  color: var(--text-primary);
+  font-size: var(--text-md);
+  font-weight: 600;
+  margin: 0 0 var(--space-4) 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.automation-setup-notes h4 i {
+  color: var(--turquoise);
+}
+
+.automation-setup-notes ul {
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--text-secondary);
+}
+
+.automation-setup-notes li {
+  margin-bottom: var(--space-3);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.automation-setup-notes li:last-child {
+  margin-bottom: 0;
+}
+
+.automation-setup-notes code {
+  background: transparent; /* Match logs transparent background */
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: var(--text-sm); /* Match logs font size */
+  color: var(--text-secondary); /* Match logs text color */
+  border: 1px solid var(--border-secondary); /* Use secondary border like logs */
+}
+
+/* Pro Tip Section */
+.pro-tip {
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  background: linear-gradient(135deg, rgba(52, 202, 198, 0.1), rgba(52, 202, 198, 0.05));
+  border: 1px solid rgba(52, 202, 198, 0.3);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--turquoise);
+}
+
+.pro-tip h5 {
+  color: var(--turquoise);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  margin: 0 0 var(--space-2) 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pro-tip h5 i {
+  font-size: var(--text-xs);
+}
+
+.pro-tip p {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .automation-example {
+    padding: var(--space-4);
+    margin-bottom: var(--space-6);
+  }
+
+  .code-block {
+    font-size: calc(var(--text-xs) * 0.9);
+    padding: var(--space-4);
+    max-height: 300px;
+  }
+
+  .copy-code-button {
+    position: static;
+    width: 100%;
+    margin-top: var(--space-3);
+    border-radius: var(--radius-md);
+  }
+
+  .code-block-container {
+    padding: var(--space-4);
+  }
+
+  .automation-setup-notes {
+    padding: var(--space-4);
+  }
+
+  .pro-tip {
+    padding: var(--space-3);
+    margin-top: var(--space-4);
+  }
+}
+
+/* Loading State for Code Blocks */
+.code-block.loading {
+  background: var(--ha-bg-secondary);
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100px;
+}

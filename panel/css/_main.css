@@ -1,0 +1,35 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@import url('./base/_variables.css');
+@import url('./base/_reset.css');
+@import url('./base/_typography.css');
+
+@import url('./layout/_header.css');
+@import url('./layout/_main.css');
+@import url('./layout/_grid.css');
+
+@import url('./components/_buttons.css');
+@import url('./components/_forms.css');
+@import url('./components/_tooltips.css');
+@import url('./components/_modals.css');
+@import url('./components/_spinners.css');
+@import url('./components/_cards.css');
+
+@import url('./sections/_lpr.css');
+@import url('./sections/_ai_search.css');
+@import url('./sections/_ai_unified.css');
+@import url('./sections/_ai_datetime.css');
+@import url('./sections/_search_results.css');
+@import url('./sections/_code_blocks.css');
+
+@import url('./utils/_utilities.css');
+@import url('./utils/_scrollbars.css');
+@import url('./utils/_responsive.css');
+
+/* Custom styles for centering headers */
+.content-card h3,
+.ai-search-container h3 {
+    text-align: center;
+    margin-bottom: var(--space-4); /* Add some space below the centered header */
+}

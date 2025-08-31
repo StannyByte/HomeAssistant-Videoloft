@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Videoloft Surveillance Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Font Awesome & Google Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet" />
+
+    <!-- HLS.js for video streaming -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12"></script>
+
+    <!-- SortableJS for drag-and-drop -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+    <!-- Flatpickr for date/time selection -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+
+    <!-- Centralized Stylesheet -->
+    <link rel="stylesheet" href="/videoloft_panel/css/_main.css" />
+</head>
+
+<body>
+    <div class="videoloft-panel">
+        <!-- Header with Navigation -->
+        <header class="header" role="banner">
+            <div class="header-content">
+
+                <nav class="top-nav">
+                    <ul>
+                        <li class="nav-item active" data-tab="live" title="Live Monitoring" tabindex="0">
+                            <i class="fas fa-circle-play" aria-hidden="true"></i>
+                            <span class="nav-text">Live</span>
+                        </li>
+                        <li class="nav-item" data-tab="lpr" title="License Plate Recognition" tabindex="0">
+                            <i class="fas fa-car" aria-hidden="true"></i>
+                            <span class="nav-text">LPR</span>
+                        </li>
+                        <li class="nav-item" data-tab="aiSearch" title="AI Search" tabindex="0">
+                            <i class="fas fa-magnifying-glass-chart" aria-hidden="true"></i>
+                            <span class="nav-text">AI Search</span>
+                        </li>
+                    </ul>
+                </nav>
+                
+                <!-- Stream Control Toggle Button -->
+                <div class="header-controls">
+                    <button id="globalStreamToggle" class="stream-toggle-btn" aria-label="Toggle camera streams" title="Streams Active - Click to pause">
+                        <i id="streamToggleIcon" class="fas fa-video"></i>
+                        <span id="streamToggleText" class="stream-toggle-text">Streams</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content" role="main">
+            <!-- Live Monitoring Tab -->
+            <section class="tab-section active" id="liveTab" aria-labelledby="liveTabLabel">
+                <!-- Camera Controls -->
+                <div class="camera-controls">
+                </div>
+
+                <div class="camera-grid" aria-live="polite" id="cameraGrid">
+                    <div class="loading-container">
+                        <div class="spinner"></div>
+                        <p>Loading cameras...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- LPR Tab -->
+            <section class="tab-section" id="lprTab">
+                <div class="lpr-combined-section">
+                    <div class="card">
+                        <h3><i class="fas fa-plus-circle"></i>Add Trigger</h3>
+                        <form id="lprForm" class="lpr-form lpr-form-centered">
+                            <div class="form-group">
+                                <label for="cameraSelect">Select Camera:</label>
+                                <select id="cameraSelect" name="camera" required>
+                                    <option value="">Loading cameras...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="licensePlate">License Plate:</label>
+                                <input type="text" id="licensePlate" name="licensePlate" placeholder="ABC123" />
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Add Trigger
+                            </button>
+                        </form>
+                    </div>
+                    <div class="card">
+                        <h3><i class="fas fa-list"></i>Active Triggers <span id="lprTriggerCount" class="badge-count" aria-live="polite"></span></h3>
+                        <div id="lprTriggersList" class="triggers-container">
+                            <div class="loading-container">
+                                <div class="spinner"></div>
+                                <p>Loading triggers...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3><i class="fas fa-terminal"></i>Real-time Logs</h3>
+                    <div id="lprLogs" class="logs-container">
+                        <div class="log-entry">
+                            <span class="timestamp">System initialized</span>
+                            <span class="message">LPR monitoring started</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card automation-examples-card" id="lprAutomationCard">
+                    <h3><i class="fas fa-code"></i>Home Assistant Automation Examples</h3>
+                    <p>Integrate LPR events with Home Assistant notifications using these templates. Pick a tab to view and copy:</p>
+
+                    <!-- Subtabs for examples -->
+                    <div class="subtabs" role="tablist" aria-label="LPR examples">
+                        <button class="subtab-btn active" data-target="#lprTabSimple" role="tab" aria-selected="true"><i class="fas fa-bell"></i> Simple</button>
+                        <button class="subtab-btn" data-target="#lprTabEnhanced" role="tab" aria-selected="false"><i class="fas fa-external-link-alt"></i> Enhanced</button>
+                        <button class="subtab-btn" data-target="#lprTabSetup" role="tab" aria-selected="false"><i class="fas fa-info-circle"></i> Setup</button>
+                    </div>
+
+                    <!-- Basic LPR Notification -->
+                    <div class="automation-example subtab-content active" id="lprTabSimple" role="tabpanel" aria-labelledby="Simple">
+                        <h4><i class="fas fa-bell"></i>Simple LPR Notification</h4>
+                        <p>Clean, simple notification when a license plate is detected:</p>
+                        <div class="code-block-wrapper">
+                            <pre class="code-block" id="basicLprYaml">alias: LPR Detection Alert
+description: Simple notification for license plate detection
+triggers:
+  - entity_id: sensor.videoloft_lpr_matched_event
+    from: unknown
+    trigger: state
+conditions: []
+actions:
+  - data:
+      title: "🚗 License Plate Detected"
+      message: "{{ state_attr('sensor.videoloft_lpr_matched_event', 'license_plate') or 'Unknown Plate' }}"
+      data:
+        image: /local/lpr.jpg
+        clickAction: "{{ state_attr('sensor.videoloft_lpr_matched_event', 'recording_url') }}"
+    action: notify.mobile_app_your_device_name
+mode: single</pre>
+                            <button class="copy-code-button" onclick="copyCodeToClipboard('basicLprYaml')" title="Copy to clipboard">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Enhanced LPR Notification with Link -->
+                    <div class="automation-example subtab-content" id="lprTabEnhanced" role="tabpanel" aria-labelledby="Enhanced" hidden>
+                        <h4><i class="fas fa-external-link-alt"></i>Enhanced LPR Notification with Vehicle Info</h4>
+                        <p>More detailed notification with vehicle details when available:</p>
+                        <div class="code-block-wrapper">
+                            <pre class="code-block" id="enhancedLprYaml">alias: LPR Detection with Vehicle Details
+description: Notification with vehicle information when available
+triggers:
+  - entity_id: sensor.videoloft_lpr_matched_event
+    from: unknown
+    trigger: state
+conditions: []
+actions:
+  - data:
+      title: "🚗 License Plate Alert"
+      message: >
+        {% set plate = state_attr('sensor.videoloft_lpr_matched_event', 'license_plate') or 'Unknown' %}
+        {% set make = state_attr('sensor.videoloft_lpr_matched_event', 'make') %}
+        {% set model = state_attr('sensor.videoloft_lpr_matched_event', 'model') %}
+        {% set color = state_attr('sensor.videoloft_lpr_matched_event', 'color') %}
+        {{ plate }}
+        {%- if make and model %} - {{ make }} {{ model }}{% endif %}
+        {%- if color %} ({{ color }}){% endif %}
+      data:
+        image: /local/lpr.jpg
+        clickAction: "{{ state_attr('sensor.videoloft_lpr_matched_event', 'recording_url') }}"
+        actions:
+          - action: VIEW_EVENT
+            title: View in Videoloft
+            uri: "{{ state_attr('sensor.videoloft_lpr_matched_event', 'recording_url') }}"
+    action: notify.mobile_app_your_device_name
+mode: single</pre>
+                            <button class="copy-code-button" onclick="copyCodeToClipboard('enhancedLprYaml')" title="Copy to clipboard">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Setup Instructions -->
+                    <div class="automation-setup-notes subtab-content" id="lprTabSetup" role="tabpanel" aria-labelledby="Setup" hidden>
+                        <h4><i class="fas fa-info-circle"></i>Setup Instructions</h4>
+                        <ul>
+                            <li><strong>Device Name:</strong> Replace <code>your_device_name</code> with your actual
+                                mobile device name from the Home Assistant companion app (e.g., <code>john_s_s25u</code>)</li>
+                            <li><strong>Thumbnail:</strong> The LPR thumbnail is automatically saved to
+                                <code>/local/lpr.jpg</code> when an event is detected</li>
+                            <li><strong>Working URL:</strong> The <code>recording_url</code> attribute provides the direct link to view the event in the Videoloft app</li>
+                            <li><strong>Simple Setup:</strong> Copy the YAML and paste it into your Home Assistant
+                                automations (Settings → Automations & Scenes → Create Automation → Skip → YAML mode)</li>
+                        </ul>
+
+                        <div class="pro-tip">
+                            <h5><i class="fas fa-lightbulb"></i>Pro Tip</h5>
+                            <p>The simple notification shows just the license plate number. The enhanced version adds vehicle details (make, model, color) when available, but keeps the message clean and mobile-friendly.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- AI Search Tab -->
+            <section class="tab-section" id="aiSearchTab">
+                <!-- Configuration Card -->
+                <div class="card">
+                    <h3><i class="fas fa-cog"></i>Configuration</h3>
+                    <form class="ai-config-form">
+                        <!-- API Key Configuration -->
+                        <div class="form-group">
+                            <label for="geminiApiKey">API Key:</label>
+                            <div class="input-group">
+                                <input type="password" id="geminiApiKey" name="geminiApiKey"
+                                    placeholder="Enter your Google Gemini API Key" autocomplete="off" />
+                                <button type="button" id="saveApiKeyButton" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Save Key
+                                </button>
+                            </div>
+                            <small id="serverKeyStatus" class="form-text"></small>
+                        </div>
+
+                        <!-- Camera Selection -->
+                        <div class="form-group">
+                            <label for="aiCameraSelect">Select Camera:</label>
+                            <select id="aiCameraSelect">
+                                <option value="">All Cameras</option>
+                            </select>
+                        </div>
+
+                        <!-- Date Selection -->
+                        <div class="form-row ai-date-row-centered">
+                            <div class="form-group">
+                                <label for="startDate">Start Date:</label>
+                                <input type="date" id="startDate" name="startDate" class="date-input" />
+                            </div>
+                            <div class="form-group">
+                                <label for="endDate">End Date:</label>
+                                <input type="date" id="endDate" name="endDate" class="date-input" />
+                            </div>
+                        </div>
+
+                        <!-- Analysis Controls -->
+                        <div class="form-group">
+                            <label>Analysis:</label>
+                            <div class="analysis-controls-row">
+                                <div class="analysis-buttons">
+                                    <button type="button" id="runAnalysisButton" class="btn btn-primary btn-large">
+                                        <i class="fas fa-play"></i> Run Analysis
+                                    </button>
+                                </div>
+                                <div class="analysis-center">
+                                    <button type="button" id="clearAIDataButton" class="btn btn-secondary btn-large">
+                                        <i class="fas fa-trash"></i> Clear Data
+                                    </button>
+                                </div>
+                                <div id="aiProcessingStatus" class="processing-status-right">
+                                    <button type="button" id="removeApiKeyButton" class="btn btn-secondary"
+                                        style="display:none;">
+                                        <i class="fas fa-key"></i> Remove API Key
+                                    </button>
+                                    <button type="button" id="cancelProcessing" class="btn btn-sm btn-secondary" style="display: none;">
+                                        <i class="fas fa-stop"></i> Cancel
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Progress Details (shown when processing) -->
+                            <div id="processingProgress" class="progress-container" style="display: none;">
+                                <div class="progress-header">
+                                    <span id="progressText">Processing events...</span>
+                                    <span id="progressPercent">0%</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div id="progressFill" class="progress-fill"></div>
+                                </div>
+                                <div class="progress-summary">
+                                    <span><span id="processedEvents">0</span> / <span id="totalEvents">0</span> events</span>
+                                    <span>•</span>
+                                    <span><span id="usedTokens">0</span> tokens used</span>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <!-- Search Card -->
+                <div class="card">
+                    <h3><i class="fas fa-magnifying-glass-chart"></i>Search</h3>
+                    <form id="aiSearchForm" class="ai-search-form">
+                        <div class="form-group">
+                            <label for="searchQuery">Search for:</label>
+                            <div class="input-group">
+                                <input type="text" id="searchQuery" name="searchQuery"
+                                    placeholder="e.g., person in red jacket, white car, delivery truck..." />
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search"></i> Search
+                                </button>
+                            </div>
+                            <small class="form-text">Describe what you're looking for in the footage</small>
+                        </div>
+                        <div id="srStatus" aria-live="polite" role="status" style="position: absolute; left: -9999px; height: 1px; width: 1px; overflow: hidden;">
+                          Ready
+                        </div>
+                    </form>
+
+                    <!-- Search Results -->
+                    <div id="searchResults" class="search-results-container">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <div class="empty-state-title">Search Events</div>
+                            <div class="empty-state-description">Enter your search criteria and click "Search" to find matching events</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Status Overlay -->
+        <div id="statusOverlay" class="status-overlay" style="display: none;">
+            <div class="status-content">
+                <div class="spinner"></div>
+                <p id="statusMessage">Processing...</p>
+            </div>
+        </div>
+
+
+    </div>
+
+    <!-- JavaScript Dependencies -->
+    <script src="/videoloft_panel/js/utils/ui.js"></script>
+    <script src="/videoloft_panel/js/components/tabs.js"></script>
+    <script src="/videoloft_panel/js/components/videoplayer.js"></script>
+    <script src="/videoloft_panel/js/components/header_scroll.js"></script>
+    <script src="/videoloft_panel/js/components/header_stream_control.js"></script>
+    <script src="/videoloft_panel/js/managers/lpr_manager.js"></script>
+    <script src="/videoloft_panel/js/managers/ai_manager.js"></script>
+    <script src="/videoloft_panel/js/main.js"></script>
+    
+    <script>
+        // Copy code to clipboard function
+        function copyCodeToClipboard(elementId) {
+            const codeElement = document.getElementById(elementId);
+            const button = event.target.closest('.copy-code-button');
+            
+            if (codeElement) {
+                const text = codeElement.textContent;
+                
+                // Try to use the modern clipboard API first
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        showCopySuccess(button);
+                    }).catch(err => {
+                        fallbackCopyToClipboard(text, button);
+                    });
+                } else {
+                    fallbackCopyToClipboard(text, button);
+                }
+            }
+        }
+        
+        // Fallback copy method for older browsers
+        function fallbackCopyToClipboard(text, button) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.opacity = '0';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                showCopySuccess(button);
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+                showCopyError(button);
+            }
+            
+            document.body.removeChild(textArea);
+        }
+        
+        // Show copy success feedback
+        function showCopySuccess(button) {
+            const originalContent = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-check"></i>';
+            button.style.backgroundColor = 'var(--accent-success)';
+            button.style.borderColor = 'var(--accent-success)';
+            button.style.color = 'var(--ha-bg-primary)';
+            
+            setTimeout(() => {
+                button.innerHTML = originalContent;
+                button.style.backgroundColor = '';
+                button.style.borderColor = '';
+                button.style.color = '';
+            }, 2000);
+        }
+        
+        // Show copy error feedback
+        function showCopyError(button) {
+            const originalContent = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-times"></i>';
+            button.style.backgroundColor = 'var(--accent-error)';
+            button.style.borderColor = 'var(--accent-error)';
+            button.style.color = 'var(--ha-bg-primary)';
+            
+            setTimeout(() => {
+                button.innerHTML = originalContent;
+                button.style.backgroundColor = '';
+                button.style.borderColor = '';
+                button.style.color = '';
+            }, 2000);
+        }
+    </script>
+</body>
+
+</html>

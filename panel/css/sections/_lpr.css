@@ -1,0 +1,615 @@
+/* ===============================
+   PREMIUM LPR INTERFACE
+   =============================== */
+
+.lpr-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
+  width: 100%;
+}
+
+/* LPR Combined Section Layout */
+.lpr-combined-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+  align-items: stretch; /* Make both cards stretch to same height */
+  margin-bottom: var(--space-1); /* Further reduced gap below combined section */
+}
+
+/* Ensure both cards have the same dimensions */
+.lpr-combined-section .card {
+  display: flex;
+  flex-direction: column;
+  min-height: 300px; /* Set minimum height for consistency */
+  padding: var(--space-6);
+}
+
+.lpr-combined-section .card h3 {
+  margin-bottom: var(--space-4);
+  flex-shrink: 0; /* Prevent header from shrinking */
+}
+#lprTab .card h3 i,
+#lprTab .lpr-combined-section .card h3 i {
+  color: var(--turquoise) !important;
+  font-size: var(--text-xl);
+  padding: var(--space-2);
+  background: rgba(52, 202, 198, 0.08);
+  border-radius: var(--radius-lg);
+}
+
+/* Small count badge next to headers */
+#lprTab .badge-count {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  margin-left: var(--space-2);
+}
+
+/* Make triggers container scrollable and contained */
+.lpr-combined-section .card .triggers-container {
+  flex: 1;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+@media (max-width: 768px) {
+  .lpr-combined-section {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+}
+
+.lpr-left-panel,
+.lpr-right-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+  /* height: 750px; */ /* Removed fixed height */
+}
+
+/* Enhanced LPR Form Container */
+.lpr-form-section {
+  flex: 0 0 auto;
+  min-height: 240px;
+  width: 100%;
+}
+
+.lpr-form {
+  max-width: none; /* Remove width constraint */
+  margin: 0; /* Remove centering */
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  flex: 1; /* Take available space */
+}
+
+/* Centered LPR Form Styling */
+.lpr-form-centered {
+  align-items: center; /* Center all form elements horizontally */
+  text-align: center; /* Center text content */
+}
+
+.lpr-form-centered .form-group {
+  width: 100%; /* Ensure form groups take full width */
+  max-width: 350px; /* Consistent max width for all form groups */
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center form group content */
+}
+
+.lpr-form-centered .form-group label {
+  justify-content: center; /* Center label content */
+  text-align: center;
+  width: 100%;
+}
+
+.lpr-form .form-group select,
+.lpr-form .form-group input[type="text"] {
+  width: 100%;
+  max-width: 350px; /* Consistent max-width for uniform sizing */
+  min-height: 44px; /* Ensure consistent height */
+  box-sizing: border-box; /* Ensure padding is included in width calculation */
+  background-color: var(--ha-bg-elevated) !important; /* Match AI Search styling */
+  border: 1px solid var(--border-primary) !important;
+  border-radius: var(--radius-md) !important;
+  padding: var(--space-2) var(--space-3) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 1px 4px rgba(52,202,198,0.04);
+  transition: all 0.2s ease;
+}
+
+/* Focus states for LPR inputs - Match AI Search */
+.lpr-form .form-group select:focus,
+.lpr-form .form-group input[type="text"]:focus {
+  border-color: var(--turquoise) !important;
+  box-shadow: 0 0 0 2px rgba(52,202,198,0.2) !important;
+  outline: none !important;
+}
+
+.lpr-form .form-group,
+.lpr-form .form-row {
+  margin-bottom: 0; /* Remove default margin-bottom from form-group/form-row when inside lpr-form */
+}
+
+.lpr-form .btn-primary {
+  margin-top: var(--space-4); /* Add some space above the button */
+  align-self: center; /* Center the button */
+}
+
+/* Common styles for LPR Triggers List & Log Container */
+.lpr-triggers-list,
+.log-container {
+  position: relative;
+  overflow-y: auto;
+  flex: none;
+}
+
+/* Specific styles for LPR Triggers List */
+.lpr-triggers-list {
+  border-radius: var(--radius-2xl);
+  
+}
+
+/* Premium Triggers Container - Content area within lpr-triggers-column */
+.triggers-container {
+  height: auto;
+  overflow-y: visible; /* Relies on .lpr-triggers-column for scrolling */
+  padding-right: var(--space-2);
+  margin-right: -var(--space-2);
+}
+
+/* Enhanced Trigger Items - Smaller and more compact */
+.trigger-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 76, 91, 0.75);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4); /* Reduced padding */
+  margin-bottom: var(--space-2); /* Reduced margin */
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  min-height: 60px; /* Set consistent height */
+}
+
+.trigger-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--accent-info) 0%, var(--turquoise) 100%);
+  opacity: 0.5;
+}
+
+.trigger-item:hover {
+  background: var(--ha-bg-elevated);
+  transform: translateX(3px); /* Reduced hover movement */
+  box-shadow: var(--shadow-md);
+}
+
+.trigger-info {
+  flex: 1;
+  margin-right: var(--space-3); /* Reduced margin */
+}
+
+.trigger-details {
+  display: flex;
+  flex-direction: row; /* Change to row layout for compactness */
+  gap: var(--space-3); /* Add gap between plate and camera */
+  align-items: center;
+}
+
+.trigger-details .trigger-plate {
+  font-size: var(--text-base); /* Reduced font size */
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--ha-bg-primary);
+  padding: var(--space-1) var(--space-2); /* Reduced padding */
+  border-radius: var(--radius-sm); /* Smaller border radius */
+  border: 1px solid var(--border-primary);
+  display: inline-block;
+  letter-spacing: 0.1em;
+  text-transform: uppercase; /* Capitalize the plate */
+}
+
+.trigger-details .trigger-camera {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-weight: 500;
+}
+
+.trigger-details .trigger-date {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Subtabs for automation examples */
+.automation-examples-card .subtabs {
+  display: flex;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 var(--space-4) 0;
+  flex-wrap: wrap;
+}
+.automation-examples-card .subtab-btn {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: var(--ha-bg-elevated);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.automation-examples-card .subtab-btn.active {
+  background: var(--turquoise);
+  color: var(--ha-bg-primary);
+  border-color: var(--turquoise);
+  font-weight: 600;
+}
+.automation-examples-card .subtab-content[hidden] {
+  display: none !important;
+}
+.automation-examples-card .subtab-content.active {
+  display: block;
+}
+
+.trigger-actions {
+  display: flex;
+  align-items: center;
+}
+
+.trigger-actions .btn {
+  min-height: 32px; /* Reduced button height */
+  padding: var(--space-1) var(--space-2); /* Reduced padding */
+  font-size: var(--text-sm); /* Smaller font size */
+}
+
+/* ===============================
+   LPR LOGS PREMIUM STYLING
+   =============================== */
+
+.log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-6);
+  margin-bottom: var(--space-4);
+  flex: none; /* Ensures it doesn't grow in flex column */
+}
+
+.log-header:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.log-header h3 {
+  color: var(--text-primary);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Center the content of the h3 */
+  gap: var(--space-3);
+  margin: 0;
+}
+
+#lprTab .log-header h3 i {
+  color: var(--turquoise) !important;
+  font-size: var(--text-xl);
+  padding: var(--space-2);
+  background: rgba(52, 202, 198, 0.08);
+  border-radius: var(--radius-lg);
+}
+
+/* Specific styles for Log Container */
+.log-container {
+  border-radius: var(--radius-lg);
+  height: 857px;
+  max-height: 857px;
+}
+
+.log-container::before { /* This was specific to log-container */
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-lg);
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(52, 202, 198, 0.1), transparent, rgba(52, 202, 198, 0.1));
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  pointer-events: none;
+}
+
+.log-container:hover {
+  box-shadow: 0 6px 20px rgba(52, 202, 198, 0.3);
+  transform: translateY(-1px);
+}
+
+.log-container::-webkit-scrollbar {
+  width: 10px;
+}
+
+.log-container::-webkit-scrollbar-track {
+  background: var(--ha-bg-secondary);
+  border-radius: 5px;
+}
+
+.log-container::-webkit-scrollbar-thumb {
+  background: var(--turquoise);
+  border-radius: 6px;
+  border: 2px solid var(--ha-bg-elevated);
+}
+
+.log-container::-webkit-scrollbar-thumb:hover {
+  box-shadow: 0 0 8px rgba(52, 202, 198, 0.3);
+}
+
+.log-entry {
+  padding: var(--space-4);
+  margin-bottom: var(--space-3);
+  border-left: 4px solid;
+  background: var(--ha-bg-elevated);
+  box-shadow: var(--shadow-sm);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.log-entry:hover {
+  box-shadow: 0 4px 12px rgba(52, 202, 198, 0.15);
+  background: linear-gradient(135deg, var(--ha-bg-elevated) 0%, rgba(52, 202, 198, 0.05) 100%);
+}
+
+.log-entry.info {
+  border-left-color: var(--accent-info);
+  background: linear-gradient(135deg, var(--ha-bg-elevated) 0%, rgba(59, 130, 246, 0.05) 100%);
+  color: var(--text-secondary);
+}
+
+.log-entry.warning {
+  border-left-color: var(--accent-warning);
+  background: linear-gradient(135deg, var(--ha-bg-elevated) 0%, rgba(245, 158, 11, 0.05) 100%);
+  color: var(--text-secondary);
+}
+
+.log-entry.error {
+  border-left-color: var(--accent-error);
+  background: linear-gradient(135deg, var(--ha-bg-elevated) 0%, rgba(239, 68, 68, 0.05) 100%);
+  color: var(--text-secondary);
+}
+
+/* Better scaling for LPR panels */
+/* .lpr-left-panel, .lpr-right-panel definition is now earlier in the LPR section */
+
+/* Styling for the Home Assistant Automation Example Card */
+#lprTab .automation-examples-card {
+  background: rgba(21, 21, 28, 0.6); /* Match generic card background */
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  border: 1px solid rgba(251, 251, 251, 0.06);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+  position: relative;
+  overflow: hidden;
+}
+
+#lprTab .automation-examples-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: transparent;
+  opacity: 0;
+}
+
+.automation-example-card h3 {
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Center the content of the h3 */
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-primary);
+  position: relative;
+  color: var(--text-primary);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-size: var(--text-xl); /* Match section-title h2 */
+}
+
+#lprTab .automation-example-card h3 i,
+#lprTab .automation-examples-card h3 i {
+  color: var(--purple-primary); /* Match generic card icon color */
+  font-size: var(--text-xl);
+  padding: var(--space-2);
+  background: rgba(106, 90, 205, 0.1);
+  border-radius: var(--radius-lg);
+}
+
+.automation-example-card h3::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent-primary), var(--light-turquoise));
+  border-radius: var(--radius-full);
+}
+
+.automation-example-card p {
+  color: var(--text-secondary);
+  margin-bottom: var(--space-4); /* Consistent paragraph spacing */
+  line-height: 1.6;
+}
+
+/* Triggers Container - Content area within lpr-triggers-column */
+.triggers-container {
+  height: auto;
+  overflow-y: auto; /* Enable scrolling when needed */
+  padding: var(--space-2);
+  margin-right: 0;
+  min-height: 120px;
+  max-height: 250px; /* Limit height to keep container constrained */
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-md);
+  background: var(--ha-bg-secondary);
+}
+
+/* Empty state styling */
+.triggers-container:empty::after {
+  content: "No triggers configured";
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: var(--text-sm);
+}
+
+/* Loading state in triggers container */
+.triggers-container .loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+}
+
+.logs-container {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  min-height: 200px;
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: var(--text-sm);
+  box-shadow: none;
+}
+
+
+.logs-container .log-entry {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border-secondary);
+  margin-bottom: 0;
+  background: transparent;
+  border-left: none;
+  box-shadow: none;
+  font-family: inherit;
+}
+
+.logs-container .log-entry:last-child {
+  border-bottom: none;
+}
+
+.logs-container .timestamp {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  width: 120px;
+  font-size: var(--text-xs);
+}
+
+.logs-container .message {
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+/* AI controls styling */
+.ai-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.ai-controls .form-group {
+  margin-bottom: var(--space-4);
+}
+
+.processing-status {
+  background: var(--ha-bg-elevated);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  color: var(--text-secondary);
+  font-style: italic;
+  box-shadow: var(--shadow-sm);
+  margin-top: var(--space-4);
+}
+
+/* Search results styling */
+.search-results {
+  margin-top: var(--space-4);
+  background: var(--ha-bg-elevated);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  min-height: 100px;
+  box-shadow: var(--shadow-sm);
+}
+
+.search-form {
+  margin-bottom: var(--space-4);
+}
+
+/* Enhanced code block styling for automation examples - Match logs styling */
+.code-block-container {
+  background: transparent; /* Match logs transparent background */
+  border: none; /* Remove border like logs */
+  border-radius: 0; /* Remove border radius like logs */
+  padding: 0; /* Remove padding like logs */
+  margin-bottom: var(--space-4);
+  overflow-x: auto;
+  box-shadow: none; /* Remove shadow like logs */
+}
+
+.code-block {
+  font-family: 'JetBrains Mono', 'Fira Mono', 'Consolas', monospace;
+  font-size: var(--text-sm); /* Match logs font size */
+  color: var(--text-secondary); /* Match logs text color */
+  background: transparent; /* Match logs transparent background */
+  padding: var(--space-2) 0; /* Match logs padding */
+  border: none;
+  border-bottom: 1px solid var(--border-secondary); /* Match logs border style */
+  line-height: 1.6;
+  white-space: pre;
+  word-break: break-word;
+  letter-spacing: 0.02em;
+  margin-bottom: 0;
+}
+
+.code-block-container .code-block {
+  background: transparent;
+  color: var(--text-secondary); /* Match logs text color */
+}
+
+.code-block-container .code-block::selection {
+  background: rgba(52, 202, 198, 0.2); /* Use turquoise selection for consistency */
+  color: var(--text-primary);
+}

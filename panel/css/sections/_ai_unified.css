@@ -1,0 +1,574 @@
+/* ===============================
+   AI SEARCH CARD INTERFACE
+   =============================== */
+
+/* AI Search Tab Layout - Match LPR structure */
+#aiSearchTab {
+  padding: var(--space-6);
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* Ensure cards follow consistent spacing like LPR section */
+#aiSearchTab .card {
+  margin-bottom: 0; /* Remove individual card margins, use gap instead */
+}
+
+#aiSearchTab .card:last-child {
+  margin-bottom: 0;
+}
+
+/* Override card header icons to match HA styling exactly */
+#aiSearchTab .card h3 i {
+  color: var(--turquoise);
+  font-size: var(--text-xl);
+  padding: var(--space-2);
+  background: rgba(52, 202, 198, 0.08);
+  border-radius: var(--radius-lg);
+}
+
+/* AI Configuration Form - Match LPR form styling exactly */
+.ai-config-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  flex: 1;
+}
+
+.ai-config-form .form-group select,
+.ai-config-form .form-group input[type="password"],
+.ai-config-form .form-group input[type="datetime-local"],
+.ai-config-form .form-group input[type="date"] {
+  width: 100%;
+  max-width: none; /* Override form component max-width */
+  min-height: 44px;
+  box-sizing: border-box;
+  background-color: #fff; /* Ensure bright white background */
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+}
+
+/* Ensure date inputs have consistent styling */
+.date-input,
+.ai-config-form .form-group input[type="date"],
+.ai-config-form .form-group input[type="password"],
+.ai-config-form .form-group select,
+.ai-search-form .form-group input[type="text"] {
+  background-color: var(--ha-bg-elevated) !important; /* Use elevated background for visibility */
+  border: 1px solid var(--border-primary) !important;
+  border-radius: var(--radius-md) !important;
+  padding: var(--space-2) var(--space-3) !important;
+  min-height: 44px !important;
+  width: 100% !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 1px 4px rgba(52,202,198,0.04);
+  transition: all 0.2s ease;
+}
+
+/* Focus states for better UX */
+.date-input:focus,
+.ai-config-form .form-group input:focus,
+.ai-config-form .form-group select:focus,
+.ai-search-form .form-group input:focus {
+  border-color: var(--turquoise) !important;
+  box-shadow: 0 0 0 2px rgba(52,202,198,0.2) !important;
+  outline: none !important;
+}
+
+/* Center date row in config card */
+.ai-date-row-centered {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
+  width: 100%;
+  max-width: 620px; /* Match other elements */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ai-date-row-centered .form-group {
+  flex: 1;
+  max-width: 298px; /* Slightly smaller to account for the gap and match other elements exactly */
+}
+
+/* Make all form elements align with date inputs */
+.ai-config-form .form-group {
+  width: 100%;
+  max-width: 620px; /* Total width of both date inputs + gap */
+  margin: 0 auto;
+}
+
+/* Input groups should also match the date width */
+.ai-config-form .input-group {
+  width: 100%;
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+/* Ensure individual inputs and selects fill their containers properly */
+.ai-config-form .form-group input[type="password"],
+.ai-config-form .form-group select {
+  width: 100%;
+  max-width: none; /* Remove any max-width restrictions */
+}
+
+/* Center config form in card, match Add Trigger style but wider */
+.ai-config-form {
+  align-items: center;
+  justify-content: center;
+  max-width: 680px; /* Wider to reduce empty space on sides */
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Center search form in card */
+.ai-search-form {
+  align-items: center;
+  justify-content: center;
+  max-width: 680px; /* Wider to reduce empty space on sides */
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Make search form elements align with config elements */
+.ai-search-form .form-group {
+  width: 100%;
+  max-width: 620px; /* Match the config form width */
+  margin: 0 auto;
+}
+
+.ai-search-form .input-group {
+  width: 100%;
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+/* Search input should take up most of the space, button should be compact */
+.ai-search-form .input-group input[type="text"] {
+  flex: 1;
+  min-width: 0; /* Allow input to shrink */
+}
+
+.ai-search-form .input-group .btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+  min-width: 120px; /* Ensure button has consistent width */
+}
+
+/* Style the helper text */
+.ai-search-form .form-text {
+  text-align: center;
+  margin-top: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+/* Center card content for AI Search */
+#aiSearchTab .card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-config-form .form-group,
+.ai-config-form .form-row {
+  margin-bottom: 0;
+}
+
+/* Input Groups for API Key and Search */
+.input-group {
+  display: flex;
+  gap: var(--space-2);
+  align-items: stretch;
+}
+
+.input-group input {
+  flex: 1;
+}
+
+.input-group .btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Date Time Row Layout */
+.ai-config-form .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  margin-bottom: 0;
+}
+
+.ai-config-form .form-row .form-group {
+  margin-bottom: 0;
+}
+
+/* Quick Select Button Group */
+.button-group {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.button-group .btn {
+  flex: 1;
+  min-width: 120px;
+}
+
+/* Active state for quick select buttons */
+.button-group .btn.active {
+  background-color: var(--turquoise);
+  border-color: var(--turquoise);
+  color: var(--ha-bg-primary);
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(52, 202, 198, 0.25);
+}
+
+.button-group .btn.active:hover {
+  background-color: var(--light-turquoise);
+  border-color: var(--light-turquoise);
+  box-shadow: 0 6px 16px rgba(52, 202, 198, 0.35);
+}
+
+/* Analysis Controls - New layout for proper spacing */
+.analysis-controls-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 620px; /* Match the other elements exactly */
+  margin: 0 auto;
+  padding: var(--space-3) 0;
+}
+
+.analysis-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex: 1;
+}
+
+.analysis-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
+.processing-status-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  flex: 1;
+}
+
+.processing-status-right .btn {
+  white-space: nowrap;
+}
+
+/* Legacy Analysis Controls - Fixed styling for professional appearance */
+.ai-analysis-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  align-items: center;
+  text-align: center;
+  padding: var(--space-4);
+  background: linear-gradient(135deg, rgba(52, 202, 198, 0.02), rgba(52, 202, 198, 0.05));
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(52, 202, 198, 0.1);
+}
+
+/* Analysis Button - Consistent with Add Trigger button styling */
+.btn-large {
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  min-height: 40px;
+  gap: var(--space-2);
+  border-radius: var(--radius-md);
+  position: relative;
+  overflow: hidden;
+  width: auto;
+  max-width: 240px;
+}
+
+/* Remove all custom overrides to let btn-primary styling take effect naturally */
+
+/* Processing Status - Match LPR logs styling */
+.processing-status {
+  background: var(--ha-bg-elevated);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  color: var(--text-secondary);
+  font-style: italic;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-base);
+  width: 100%;
+  max-width: 600px;
+}
+
+.processing-status p {
+  margin: 0;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/* Progress Container */
+.progress-container {
+  margin-top: var(--space-4);
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--ha-bg-secondary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-bottom: var(--space-3);
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--turquoise), var(--light-turquoise));
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease;
+}
+
+.progress-summary {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin-bottom: var(--space-3);
+}
+
+.processing-controls {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-secondary);
+}
+
+/* AI Search Form - Match LPR form styling exactly */
+.ai-search-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  flex: 1;
+}
+
+.ai-search-form .form-group {
+  margin-bottom: 0;
+}
+
+.ai-search-form .form-group input[type="text"] {
+  width: 100%;
+  max-width: none; /* Override form component max-width */
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
+/* Form helper text styling */
+.ai-search-form .form-text {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin: var(--space-1) 0 0 0;
+  text-align: left;
+  display: block;
+}
+
+/* Search Results Container - Enhanced styling to match new grid */
+.search-results-container {
+  height: auto;
+  overflow: visible; /* Allow content to flow naturally */
+  padding: 0; /* Remove padding, let grid handle spacing */
+  margin-right: 0;
+  min-height: 200px;
+  border: none; /* Remove border, cards have their own borders */
+  border-radius: 0;
+  background: transparent; /* Let background show through */
+  margin-top: var(--space-4);
+  width: 100%;
+  max-width: none; /* Allow results to span full card width for multi-column grid */
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Remove custom scrollbar since we're using natural flow now */
+.search-results-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Enhanced empty state to match new design */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  padding: var(--space-8);
+  background: var(--ha-bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xl);
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.empty-state-icon {
+  font-size: 4rem;
+  margin-bottom: var(--space-4);
+  color: var(--turquoise);
+  opacity: 0.6;
+}
+
+.empty-state-title {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-3);
+}
+
+.empty-state-description {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  max-width: 400px;
+  margin-bottom: var(--space-6);
+}
+
+.empty-state-actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* No Results State */
+.no-results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 150px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.no-results i {
+  font-size: var(--text-2xl);
+  margin-bottom: var(--space-3);
+  color: var(--text-secondary);
+}
+
+.no-results p {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+/* Responsive Design Updates */
+@media (max-width: 768px) {
+  #aiSearchTab {
+    padding: var(--space-4);
+    gap: var(--space-4);
+  }
+
+  .ai-config-form .form-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+
+  .button-group {
+    flex-direction: column;
+  }
+
+  .button-group .btn {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .input-group {
+    flex-direction: column;
+  }
+
+  .processing-status {
+    max-width: none;
+  }
+
+  .progress-summary {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .processing-controls {
+    flex-direction: column;
+  }
+
+  .btn-large {
+    padding: var(--space-3) var(--space-6);
+    font-size: var(--text-base);
+    min-height: 48px;
+    align-self: center;
+    max-width: 280px;
+    width: 100%;
+  }
+
+  .empty-state {
+    padding: var(--space-6) var(--space-4);
+    min-height: 200px;
+  }
+
+  .empty-state-icon {
+    font-size: 3rem;
+  }
+
+  .empty-state-actions {
+    flex-direction: column;
+  }
+
+  /* Analysis controls responsive */
+  .analysis-controls-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+  }
+
+  .analysis-buttons {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .processing-status-right {
+    margin-left: 0;
+    justify-content: center;
+  }
+}
+
+/* Tablet Responsive */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .processing-status {
+    max-width: none;
+  }
+}

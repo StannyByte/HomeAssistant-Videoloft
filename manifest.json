@@ -1,0 +1,12 @@
+{
+  "domain": "videoloft",
+  "name": "Videoloft",
+  "version": "1.1.1",
+  "documentation": "https://github.com/StannyByte/HomeAssistant-Videoloft",
+  "issue_tracker": "https://github.com/StannyByte/HomeAssistant-Videoloft/issues",
+  "requirements": ["aiohttp>=3.7.4"],
+  "codeowners": ["@StannyByte"],
+  "config_flow": true,
+  "integration_type": "hub",
+  "iot_class": "cloud_polling"
+}
