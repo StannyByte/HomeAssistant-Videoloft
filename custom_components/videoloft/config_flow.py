@@ -19,7 +19,7 @@ from .const import (
     LPR_STORAGE_KEY,
     LPR_TRIGGER_STORAGE_KEY,
 )
-from .api import VideoloftAPI, VideoloftApiClientError, VideoloftApiAuthError
+from .helpers.api import VideoloftAPI, VideoloftApiClientError, VideoloftApiAuthError
 
 _LOGGER = logging.getLogger(__name__)
 

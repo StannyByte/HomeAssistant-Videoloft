@@ -14,7 +14,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import EntityCategory
 
 from .const import DOMAIN
-from .device_info import create_device_info, get_camera_capabilities
+from .helpers.device_info import create_device_info, get_camera_capabilities
 
 _LOGGER = logging.getLogger(__name__)
 

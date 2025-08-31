@@ -6,16 +6,18 @@
 class AIManager {
   constructor() {
     this.apiKey = null;
+    this.hasServerKey = false;
     this.searchInProgress = false;
     this.cancelController = null;
     this.currentResults = [];
     this.filteredResults = [];
     this.currentPage = 0;
-    this.resultsPerPage = 12;
+    this.resultsPerPage = 9; // show 3x3 per page for a tidy grid
     this.currentSortBy = 'relevance';
     this.currentFilters = {
       camera: 'all',
-      timeOfDay: 'all'
+      timeOfDay: 'all',
+      searchText: '' // quick keyword filter on description
     };
     
     this.init();
@@ -24,14 +26,16 @@ class AIManager {
   init() {
     console.log('AIManager: Initializing...');
     
-    // Load saved API key
-    this.loadApiKey();
+    // Check server-stored API key
+    this.checkServerKey();
     
     // Bind event listeners
     this.bindEvents();
     
     // Set default date range (last 24 hours)
     this.setDefaultDateRange();
+    // Restore previous UI state
+    this.loadUIState();
     
     console.log('AIManager: Initialization complete');
   }
@@ -57,20 +61,38 @@ class AIManager {
     // Date input event listeners
     const startDateInput = document.getElementById('startDate');
     const endDateInput = document.getElementById('endDate');
+    const cameraSelect = document.getElementById('aiCameraSelect');
+    const searchInput = document.getElementById('searchQuery');
     
     if (startDateInput) {
-      startDateInput.addEventListener('change', () => this.handleStartDateChange());
+      startDateInput.addEventListener('change', () => { this.handleStartDateChange(); this.saveUIState(); });
     }
     
     if (endDateInput) {
       // Allow user to change end date
-      endDateInput.addEventListener('change', () => this.handleEndDateChange());
+      endDateInput.addEventListener('change', () => { this.handleEndDateChange(); this.saveUIState(); });
+    }
+    if (cameraSelect) {
+      cameraSelect.addEventListener('change', () => this.saveUIState());
+    }
+    if (searchInput) {
+      searchInput.addEventListener('input', () => this.saveUIState());
     }
     
     // Search form
     const searchForm = document.getElementById('aiSearchForm');
     if (searchForm) {
       searchForm.addEventListener('submit', (e) => this.handleSearchSubmit(e));
+    }
+    // Reuse the earlier searchInput reference to avoid redeclaration errors
+    const searchButton = searchForm ? searchForm.querySelector('button[type="submit"]') : null;
+    if (searchInput && searchButton) {
+      const updateSearchButton = () => {
+        const hasQuery = !!searchInput.value.trim();
+        searchButton.disabled = !hasQuery;
+      };
+      searchInput.addEventListener('input', updateSearchButton);
+      updateSearchButton();
     }
     
     // Run Analysis button
@@ -91,24 +113,39 @@ class AIManager {
       cancelBtn.addEventListener('click', () => this.cancelSearch());
     }
 
-    // Keyboard navigation for search results
+    // Keyboard navigation for search results and quick focus (Ctrl/Cmd+K)
     document.addEventListener('keydown', (e) => this.handleKeyboardNavigation(e));
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        const qi = document.getElementById('searchQuery');
+        if (qi) qi.focus();
+      }
+      if (e.key === 'Escape') {
+        // Clear quick filter if active, close sort dropdowns
+        let changed = false;
+        if (this.currentFilters.searchText) {
+          this.currentFilters.searchText = '';
+          changed = true;
+        }
+        document.querySelectorAll('.sort-options').forEach(d => d.style.display = 'none');
+        if (changed) {
+          this.applyFiltersAndSort();
+          this.saveUIState();
+          this.announce('Cleared filters');
+        }
+      }
+    });
   }
 
-  loadApiKey() {
+  async checkServerKey() {
     try {
-      const saved = localStorage.getItem('videoloft_gemini_api_key');
-      if (saved) {
-        this.apiKey = saved;
-        const input = document.getElementById('geminiApiKey');
-        if (input) {
-          input.value = saved;
-          input.type = 'password';
-        }
-        this.updateApiKeyButtons();
-      }
+      const resp = await fetch('/api/videoloft/gemini_key');
+      const data = await resp.json();
+      this.hasServerKey = !!data.has_key;
+      this.updateApiKeyButtons();
     } catch (error) {
-      console.warn('Failed to load API key:', error);
+      console.warn('Failed to check server key:', error);
     }
   }
 
@@ -122,52 +159,60 @@ class AIManager {
     }
 
     const apiKey = input.value.trim();
-    
-    // Just save the key - no validation needed
-    localStorage.setItem('videoloft_gemini_api_key', apiKey);
-    this.apiKey = apiKey;
-    input.type = 'password';
-    this.updateApiKeyButtons();
-    
-    if (window.showSuccess) {
-      window.showSuccess('API key saved successfully');
+    try {
+      const resp = await fetch('/api/videoloft/gemini_key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: apiKey })
+      });
+      if (!resp.ok) throw new Error('Failed to store key');
+      this.hasServerKey = true;
+      this.apiKey = null;
+      input.value = '';
+      input.type = 'password';
+      this.updateApiKeyButtons();
+      window.showSuccess('API key stored on server');
+      this.announce('API key stored on server');
+    } catch (error) {
+      console.error('Failed to save key:', error);
+      window.showError('Failed to save API key');
     }
   }
 
   removeApiKey() {
-    try {
-      localStorage.removeItem('videoloft_gemini_api_key');
-      this.apiKey = null;
-      
-      const input = document.getElementById('geminiApiKey');
-      if (input) {
-        input.value = '';
-        input.type = 'password';
-      }
-      
-      this.updateApiKeyButtons();
-      window.showSuccess('API key removed successfully');
-    } catch (error) {
-      console.error('Failed to remove API key:', error);
-      window.showError('Failed to remove API key');
-    }
+    fetch('/api/videoloft/gemini_key', { method: 'DELETE' })
+      .then((resp) => {
+        if (!resp.ok) throw new Error('Failed to remove key');
+        this.hasServerKey = false;
+        const input = document.getElementById('geminiApiKey');
+        if (input) input.value = '';
+        this.updateApiKeyButtons();
+        window.showSuccess('Server API key removed');
+        this.announce('Server API key removed');
+      })
+      .catch((error) => {
+        console.error('Failed to remove key:', error);
+        window.showError('Failed to remove API key');
+      });
   }
 
   updateApiKeyButtons() {
     const saveBtn = document.getElementById('saveApiKeyButton');
     const removeBtn = document.getElementById('removeApiKeyButton');
     const input = document.getElementById('geminiApiKey');
+    const status = document.getElementById('serverKeyStatus');
     
-    if (this.apiKey && input && input.value === this.apiKey) {
-      // Key is saved and matches input
+    if (this.hasServerKey) {
+      if (status) status.textContent = 'Key stored on server';
       if (saveBtn) saveBtn.style.display = 'none';
       if (removeBtn) removeBtn.style.display = 'inline-flex';
+      if (input) input.placeholder = 'Key stored on server';
     } else if (input && input.value.trim()) {
-      // Key is entered but not saved
+      if (status) status.textContent = '';
       if (saveBtn) saveBtn.style.display = 'inline-flex';
       if (removeBtn) removeBtn.style.display = 'none';
     } else {
-      // No key
+      if (status) status.textContent = '';
       if (saveBtn) saveBtn.style.display = 'inline-flex';
       if (removeBtn) removeBtn.style.display = 'none';
     }
@@ -183,11 +228,15 @@ class AIManager {
     
     if (startInput) {
       startInput.value = this.formatDateOnly(weekAgo);
+      startInput.max = this.formatDateOnly(now);
+      startInput.addEventListener('change', () => this.saveUIState());
     }
     
     if (endInput) {
       // Set default end date to today, but allow user to change it
       endInput.value = this.formatDateOnly(now);
+      endInput.max = this.formatDateOnly(now);
+      endInput.addEventListener('change', () => this.saveUIState());
     }
   }
 
@@ -256,8 +305,9 @@ class AIManager {
       window.showWarning('Analysis already in progress');
       return;
     }
-    
-    if (!this.apiKey) {
+    // Allow either a server-stored key or a locally-entered key
+    await this.checkServerKey();
+    if (!this.hasServerKey && !this.apiKey) {
       console.error('AIManager: No API key configured');
       window.showError('Please configure your Gemini API key first');
       return;
@@ -329,8 +379,8 @@ class AIManager {
       return;
     }
     
-    if (!this.apiKey) {
-      console.error('AIManager: No API key configured for search');
+    await this.checkServerKey();
+    if (!this.hasServerKey) {
       window.showError('Please configure your Gemini API key first');
       return;
     }
@@ -344,9 +394,7 @@ class AIManager {
       return;
     }
     
-    await this.performSearch({
-      query: searchQuery
-    });
+    await this.performSearch({ query: searchQuery });
   }
 
   async performAnalysis(params) {
@@ -358,18 +406,12 @@ class AIManager {
     this.clearResults();
     
     try {
-      console.log('Sending analysis request:', {
-        url: '/api/videoloft/ai_analysis',
-        params: { ...params, api_key: this.apiKey ? '[REDACTED]' : 'NOT_SET' }
-      });
+      console.log('Sending analysis request:', { url: '/api/videoloft/ai_analysis', params });
 
       const response = await fetch('/api/videoloft/ai_analysis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...params,
-          api_key: this.apiKey
-        }),
+        body: JSON.stringify(params),
         signal: this.cancelController.signal
       });
       
@@ -392,10 +434,8 @@ class AIManager {
       
       const result = await response.json();
       console.log('Analysis result:', result);
-      
-      // Show success message with event count
-      const eventCount = result.processed_events || 0;
-      window.showSuccess(`Analysis complete! Processed ${eventCount} events. You can now search the footage.`);
+      this.announce('Analysis started');
+      window.showSuccess('Analysis started — you can track progress above');
       
     } catch (error) {
       if (error.name === 'AbortError') {
@@ -437,18 +477,12 @@ class AIManager {
     this.showLoadingState();
     
     try {
-      console.log('Sending search request:', {
-        url: '/api/videoloft/ai_search',
-        params: { ...params, api_key: this.apiKey ? '[REDACTED]' : 'NOT_SET' }
-      });
+      console.log('Sending search request:', { url: '/api/videoloft/ai_search', params });
 
       const response = await fetch('/api/videoloft/ai_search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...params,
-          api_key: this.apiKey
-        }),
+        body: JSON.stringify(params),
         signal: this.cancelController.signal
       });
       
@@ -471,6 +505,7 @@ class AIManager {
       
       const result = await response.json();
       console.log('Search result:', result);
+      this.announce(`${(result.total_count || (result.events ? result.events.length : 0))} results found`);
       
       // Check if no analysis has been run yet
       if (!result.success && result.error === 'no_analysis') {
@@ -546,6 +581,14 @@ class AIManager {
     
     // Reset progress
     this.updateProgress(0, 0, 0, 0);
+
+    // Disable interactive controls during processing
+    ['saveApiKeyButton','removeApiKeyButton','runAnalysisButton','clearAIDataButton','searchQuery','startDate','endDate','aiCameraSelect']
+      .forEach(id => { const el = document.getElementById(id); if (el) el.disabled = true; });
+    const searchForm = document.getElementById('aiSearchForm');
+    const searchBtn = searchForm ? searchForm.querySelector('button[type="submit"]') : null;
+    if (searchBtn) searchBtn.disabled = true;
+    this.announce(message);
   }
 
   hideProcessingState(status = 'ready') {
@@ -574,6 +617,14 @@ class AIManager {
     if (cancelBtn) {
       cancelBtn.style.display = 'none';
     }
+
+    // Re-enable controls
+    ['saveApiKeyButton','removeApiKeyButton','runAnalysisButton','clearAIDataButton','searchQuery','startDate','endDate','aiCameraSelect']
+      .forEach(id => { const el = document.getElementById(id); if (el) el.disabled = false; });
+    const searchForm = document.getElementById('aiSearchForm');
+    const searchBtn = searchForm ? searchForm.querySelector('button[type="submit"]') : null;
+    if (searchBtn) searchBtn.disabled = false;
+    this.announce('Ready');
   }
 
   updateProgress(processed, total, tokens, percent) {
@@ -711,7 +762,47 @@ class AIManager {
    // Show success toast with count
    const count = results.events.length;
    window.showSuccess(`Found ${count} matching event${count !== 1 ? 's' : ''} for "${searchQuery}"`);
- }
+   // Focus the first result for better keyboard flow
+   setTimeout(() => {
+     const firstCard = document.querySelector('.search-result-card');
+     if (firstCard) firstCard.focus();
+   }, 0);
+  }
+
+  // Persist non-sensitive UI state across sessions
+  loadUIState() {
+    try {
+      const state = JSON.parse(localStorage.getItem('videoloft_ui_state') || '{}');
+      const startInput = document.getElementById('startDate');
+      const endInput = document.getElementById('endDate');
+      const camSelect = document.getElementById('aiCameraSelect');
+      const queryInput = document.getElementById('searchQuery');
+      if (state.startDate && startInput) startInput.value = state.startDate;
+      if (state.endDate && endInput) endInput.value = state.endDate;
+      if (state.camera && camSelect) camSelect.value = state.camera;
+      if (state.query && queryInput) queryInput.value = state.query;
+      if (state.searchText) this.currentFilters.searchText = state.searchText;
+      if (state.sortBy) this.currentSortBy = state.sortBy;
+  } catch (_) {}
+  }
+
+  saveUIState() {
+    try {
+      const startInput = document.getElementById('startDate');
+      const endInput = document.getElementById('endDate');
+      const camSelect = document.getElementById('aiCameraSelect');
+      const queryInput = document.getElementById('searchQuery');
+      const state = {
+        startDate: startInput ? startInput.value : undefined,
+        endDate: endInput ? endInput.value : undefined,
+        camera: camSelect ? camSelect.value : undefined,
+        query: queryInput ? queryInput.value : undefined,
+        searchText: this.currentFilters.searchText,
+        sortBy: this.currentSortBy,
+      };
+      localStorage.setItem('videoloft_ui_state', JSON.stringify(state));
+    } catch (_) {}
+  }
 
  showEmptyState(container, searchQuery) {
    container.innerHTML = `
@@ -733,6 +824,19 @@ class AIManager {
  }
 
  createResultsHeader(totalCount, filteredCount) {
+   const quick = [
+     { label: 'All', icon: 'list', value: '' },
+     { label: 'People', icon: 'user', value: 'person' },
+     { label: 'Vehicles', icon: 'car', value: 'car' },
+     { label: 'Animals', icon: 'paw', value: 'dog' }
+   ];
+   const activeQuick = this.currentFilters.searchText || '';
+   const filterChips = [
+     this.currentFilters.camera !== 'all' ? `<span class="chip" data-chip="camera">${this.currentFilters.camera}<button class="chip-close" aria-label="Clear camera" data-clear="camera">×</button></span>` : '',
+     activeQuick ? `<span class="chip" data-chip="quick">${activeQuick}<button class="chip-close" aria-label="Clear filter" data-clear="quick">×</button></span>` : ''
+   ].filter(Boolean).join('');
+   const chipsHtml = filterChips ? `<div class="active-chips">${filterChips}</div>` : '';
+
    return `
      <div class="search-results-header">
        <div class="search-results-title">
@@ -744,12 +848,14 @@ class AIManager {
            Showing ${filteredCount} of ${totalCount} results
          </div>
        </div>
+       ${chipsHtml}
        <div class="search-controls">
          <div class="search-filters">
-           <button class="filter-btn active" 
-                   data-filter="all" data-value="all">
-             <i class="fas fa-list"></i> All Results
-           </button>
+           ${quick.map(q => `
+             <button class="filter-btn ${activeQuick === q.value ? 'active' : ''}" data-filter="searchText" data-value="${q.value}">
+               <i class="fas fa-${q.icon}"></i> ${q.label}
+             </button>
+           `).join('')}
          </div>
          <div class="sort-dropdown">
            <button class="sort-btn" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'">
@@ -839,9 +945,9 @@ class AIManager {
        </div>
        <div class="result-content">
          <div class="result-header">
-           <div class="result-camera">
+           <div class="result-camera" title="Filter by this camera">
              <i class="fas fa-video"></i>
-             ${cameraName}
+             <button class="link-btn" onclick="event.stopPropagation(); window.aiManager.applyFilter('camera', '${cameraName.replace(/'/g, "\\'")}')">${cameraName}</button>
            </div>
            <div class="result-time">
              <i class="fas fa-clock"></i>
@@ -862,12 +968,27 @@ class AIManager {
  }
 
  bindFilterAndSortEvents() {
-   // Filter button events
+   // Filter button events (use closest to handle icon clicks)
    document.querySelectorAll('.filter-btn').forEach(btn => {
      btn.addEventListener('click', (e) => {
-       const filterType = e.target.getAttribute('data-filter');
-       const filterValue = e.target.getAttribute('data-value');
+       const target = e.target.closest('.filter-btn');
+       if (!target) return;
+       const filterType = target.getAttribute('data-filter');
+       const filterValue = target.getAttribute('data-value');
        this.applyFilter(filterType, filterValue);
+     });
+   });
+
+   // Active chip clear events
+   document.querySelectorAll('.chip-close').forEach(btn => {
+     btn.addEventListener('click', (e) => {
+       const clearType = e.currentTarget.getAttribute('data-clear');
+       if (clearType === 'camera') this.currentFilters.camera = 'all';
+       if (clearType === 'quick') this.currentFilters.searchText = '';
+       this.currentPage = 0;
+       this.applyFiltersAndSort();
+       this.saveUIState();
+       e.stopPropagation();
      });
    });
 
@@ -890,26 +1011,41 @@ class AIManager {
    });
  }
 
- applyFilter(filterType, filterValue) {
-   this.currentFilters[filterType] = filterValue;
-   this.currentPage = 0; // Reset to first page
-   this.applyFiltersAndSort();
- }
+  applyFilter(filterType, filterValue) {
+    if (filterType === 'searchText') {
+      this.currentFilters.searchText = (filterValue || '').toLowerCase();
+    } else if (filterType === 'camera') {
+      this.currentFilters.camera = filterValue || 'all';
+    } else if (filterType === 'all') {
+      this.currentFilters = { camera: 'all', timeOfDay: 'all', searchText: '' };
+    } else {
+      this.currentFilters[filterType] = filterValue;
+    }
+    this.currentPage = 0; // Reset to first page
+    this.applyFiltersAndSort();
+    this.saveUIState();
+  }
 
- applySorting(sortBy) {
-   this.currentSortBy = sortBy;
-   this.currentPage = 0; // Reset to first page
-   this.applyFiltersAndSort();
- }
+  applySorting(sortBy) {
+    this.currentSortBy = sortBy;
+    this.currentPage = 0; // Reset to first page
+    this.applyFiltersAndSort();
+    this.saveUIState();
+  }
 
  applyFiltersAndSort() {
    // Apply filters
+   const quick = (this.currentFilters.searchText || '').trim();
    this.filteredResults = this.currentResults.filter(event => {
-     // Camera filter (if implemented later)
+     // Camera filter
      if (this.currentFilters.camera !== 'all' && event.camera_name !== this.currentFilters.camera) {
        return false;
      }
-
+     // Quick keyword filter on description
+     if (quick) {
+       const d = (event.description || '').toString().toLowerCase();
+       if (!d.includes(quick)) return false;
+     }
      return true;
    });
 
@@ -944,7 +1080,7 @@ class AIManager {
    return sortNames[this.currentSortBy] || 'Relevance';
  }
 
- showLoadingState() {
+  showLoadingState() {
    const resultsContainer = document.getElementById('searchResults');
    if (!resultsContainer) return;
 
@@ -1033,6 +1169,12 @@ class AIManager {
         minute: '2-digit'
       });
     }
+  }
+
+  // Accessibility: announce status for screen readers
+  announce(message) {
+    const sr = document.getElementById('srStatus');
+    if (sr) sr.textContent = message;
   }
 
 }

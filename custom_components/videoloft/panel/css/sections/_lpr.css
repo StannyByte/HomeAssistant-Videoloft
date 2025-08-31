@@ -40,6 +40,13 @@
   border-radius: var(--radius-lg);
 }
 
+/* Small count badge next to headers */
+#lprTab .badge-count {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  margin-left: var(--space-2);
+}
+
 /* Make triggers container scrollable and contained */
 .lpr-combined-section .card .triggers-container {
   flex: 1;
@@ -230,6 +237,38 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
+}
+
+/* Subtabs for automation examples */
+.automation-examples-card .subtabs {
+  display: flex;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 var(--space-4) 0;
+  flex-wrap: wrap;
+}
+.automation-examples-card .subtab-btn {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: var(--ha-bg-elevated);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.automation-examples-card .subtab-btn.active {
+  background: var(--turquoise);
+  color: var(--ha-bg-primary);
+  border-color: var(--turquoise);
+  font-weight: 600;
+}
+.automation-examples-card .subtab-content[hidden] {
+  display: none !important;
+}
+.automation-examples-card .subtab-content.active {
+  display: block;
 }
 
 .trigger-actions {

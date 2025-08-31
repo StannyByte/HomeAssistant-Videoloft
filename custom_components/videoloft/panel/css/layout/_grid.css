@@ -261,6 +261,44 @@
   transform: scale(1.1);
 }
 
+/* Option: always show headers (user toggle) */
+.headers-always-on .camera-header {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+  pointer-events: auto !important;
+}
+
+/* Drag handle styling (hidden on desktop by default) */
+.camera-header-content .drag-handle {
+  display: flex;
+  background: rgba(52, 202, 198, 0.15);
+  backdrop-filter: blur(5px) saturate(120%);
+  -webkit-backdrop-filter: blur(5px) saturate(120%);
+  border: 1px solid rgba(52, 202, 198, 0.3);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  padding: var(--space-1-5) var(--space-2);
+  cursor: grab;
+  transition: all var(--transition-smooth);
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 6;
+  box-shadow:
+    0 2px 8px rgba(52, 202, 198, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+}
+.camera-header-content .drag-handle:active {
+  cursor: grabbing;
+}
+.camera-header-content .drag-handle i {
+  font-size: var(--text-xs);
+  color: var(--turquoise);
+}
+
 /* Enhanced Error Message with Card Styling */
 .error-message {
   position: absolute;
@@ -487,7 +525,7 @@
     box-shadow: 0 -1px 4px rgba(0,0,0,0.2) !important;
     background: rgba(0, 0, 0, 0.5) !important;
     width: 100% !important;
-    pointer-events: auto !important;
+    /* Hidden by default; shown on tap via .show-overlay */
   }
   .camera-header.show-overlay {
     opacity: 1 !important;
@@ -522,6 +560,10 @@
   .camera-header-content .fullscreen-button i {
     font-size: 0.7rem !important;
   }
+
+  /* Swap fullscreen for drag handle on mobile */
+  .camera-header-content .fullscreen-button { display: none !important; }
+  .camera-header-content .drag-handle { display: flex !important; width: 24px !important; height: 24px !important; }
 }
 
 .camera-controls .btn-sm {

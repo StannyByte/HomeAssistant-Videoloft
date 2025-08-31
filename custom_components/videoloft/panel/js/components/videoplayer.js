@@ -29,6 +29,7 @@ class VideoloftPlayer {
     this.setGridColumns();
     this.setupDragAndDrop();
     this.startStreams();
+    this.setupZoomControls();
     // Add debounced resize handler to prevent constant recalculation
     let resizeTimeout;
     window.addEventListener("resize", () => {
@@ -70,12 +71,15 @@ class VideoloftPlayer {
               <div class="camera-header-content">
                 <span class="camera-name"><i class="fas fa-video"></i> ${camera.name}</span>
                 <span class="camera-info">${camera.model} - ${camera.resolution}</span>
-                <button class="fullscreen-button" aria-label="Toggle fullscreen">
+                <button class="drag-handle" aria-label="Reorder camera" title="Reorder">
+                  <i class="fas fa-arrows-up-down-left-right"></i>
+                </button>
+                <button class="fullscreen-button" aria-label="Toggle fullscreen" title="Fullscreen">
                   <i class="fas fa-expand"></i>
                 </button>
               </div>
             </div>
-            <div class="error-message" id="error-${camera.uidd}"></div>
+            <div class="error-message" id="error-${camera.uidd}" role="alert" aria-live="assertive" aria-atomic="true"></div>
           </div>
         </div>
       `;
@@ -146,131 +150,191 @@ class VideoloftPlayer {
       const container = document.getElementById(`card-${camera.uidd}`);
       const videoContainer = container.querySelector(".video-container");
       const videoElement = document.getElementById(`video-${camera.uidd}`);
-      const controls = document.createElement("div");
-      controls.className = "video-controls";
-      const zoomIn = document.createElement("button");
-      zoomIn.innerHTML = '<i class="fas fa-search-plus"></i>';
-      zoomIn.setAttribute("aria-label", "Zoom in");
-      const zoomOut = document.createElement("button");
-      zoomOut.innerHTML = '<i class="fas fa-search-minus"></i>';
-      zoomOut.setAttribute("aria-label", "Zoom out");
-      zoomOut.style.display = "none";
-      const resetZoom = document.createElement("button");
-      resetZoom.innerHTML = '<i class="fas fa-undo"></i>';
-      resetZoom.setAttribute("aria-label", "Reset zoom");
-      resetZoom.style.display = "none";
 
+      // Move drag state variables inside the camera loop for proper scoping
       let currentZoom = 1,
         isDragging = false,
-        lastMouseX = 0,
-        lastMouseY = 0,
+        lastX = 0,
+        lastY = 0,
         translateX = 0,
         translateY = 0;
       const MIN_ZOOM = 1,
-        MAX_ZOOM = 2.5,
+        MAX_ZOOM = 3,
         ZOOM_SPEED = 0.0005;
 
       const updateTransform = (smooth = true) => {
-        videoElement.style.transition = smooth ? "transform 0.2s ease" : "none";
-        videoElement.style.transform = `scale(${currentZoom}) translate(${translateX}px, ${translateY}px)`;
+        if (!videoElement) return;
+        videoElement.style.transition = smooth ? "transform 0.12s ease" : "none";
+        // Translate first, then scale, with origin at top-left for intuitive math
+        videoElement.style.transformOrigin = '0 0';
+        videoElement.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentZoom})`;
         if (currentZoom > 1) {
           videoContainer.classList.add("zoomed");
-          zoomOut.style.display = "flex";
-          resetZoom.style.display = "flex";
           videoContainer.style.cursor = isDragging ? "grabbing" : "grab";
         } else {
           videoContainer.classList.remove("zoomed");
-          zoomOut.style.display = "none";
-          resetZoom.style.display = "none";
           videoContainer.style.cursor = "default";
           translateX = 0;
           translateY = 0;
         }
-        zoomIn.style.display = currentZoom >= MAX_ZOOM ? "none" : "flex";
+        // While zoomed on mobile, disable drag-and-drop reordering to favor panning
+        if (this.isMobile && this.sortable) {
+          try {
+            if (typeof this.sortable.option === 'function') {
+              this.sortable.option('disabled', currentZoom > 1);
+            } else {
+              this.sortable.options.disabled = currentZoom > 1;
+            }
+          } catch (_) {}
+        }
       };
 
       const constrainBounds = () => {
         const rect = videoContainer.getBoundingClientRect();
-        const visibleWidth = rect.width / currentZoom;
-        const visibleHeight = rect.height / currentZoom;
-        const maxX = (rect.width - visibleWidth) / 2;
-        const maxY = (rect.height - visibleHeight) / 2;
-        translateX = Math.max(-maxX, Math.min(maxX, translateX));
-        translateY = Math.max(-maxY, Math.min(maxY, translateY));
+        if (currentZoom <= 1) { translateX = 0; translateY = 0; return; }
+        const contentW = rect.width * currentZoom;
+        const contentH = rect.height * currentZoom;
+        const minX = Math.min(0, rect.width - contentW);
+        const minY = Math.min(0, rect.height - contentH);
+        const maxX = 0;
+        const maxY = 0;
+        translateX = Math.max(minX, Math.min(maxX, translateX));
+        translateY = Math.max(minY, Math.min(maxY, translateY));
       };
 
-      const applyZoom = (delta, mouseX, mouseY) => {
+      const applyZoom = (delta, clientX, clientY) => {
         const rect = videoContainer.getBoundingClientRect();
         const oldZoom = currentZoom;
         const zoomDelta = -delta * ZOOM_SPEED;
-        currentZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, currentZoom * (1 + zoomDelta)));
-        if (currentZoom !== oldZoom) {
-          const relX = (mouseX - rect.left) / rect.width;
-          const relY = (mouseY - rect.top) / rect.height;
-          const scaleChange = currentZoom / oldZoom;
-          translateX = (translateX - relX * rect.width) * scaleChange + relX * rect.width;
-          translateY = (translateY - relY * rect.height) * scaleChange + relY * rect.height;
-          constrainBounds();
-          updateTransform(true);
-        }
+        const nextZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, currentZoom * (1 + zoomDelta)));
+        if (nextZoom === oldZoom) return;
+        // Anchor zoom to the cursor position
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+        const factor = nextZoom / oldZoom;
+        translateX = x - (x - translateX) * factor;
+        translateY = y - (y - translateY) * factor;
+        currentZoom = nextZoom;
+        constrainBounds();
+        updateTransform(true);
       };
 
+      // Desktop: wheel zoom and drag to pan
       videoContainer.addEventListener("wheel", (e) => {
         e.preventDefault();
         applyZoom(e.deltaY, e.clientX, e.clientY);
-      });
+      }, { passive: false });
 
-      videoContainer.addEventListener("mousedown", (e) => {
+      // Use Pointer Events for desktop dragging so we can capture the pointer
+      // and continue receiving move events even when the cursor leaves the
+      // video container or goes over overlays (like the header/popup).
+      videoContainer.addEventListener('pointerdown', (e) => {
+        // Ignore touch pointers here; touch is handled separately by touchstart
+        if (e.pointerType === 'touch') return;
         if (currentZoom > 1) {
           isDragging = true;
-          lastMouseX = e.clientX;
-          lastMouseY = e.clientY;
-          videoContainer.style.cursor = "grabbing";
+          lastX = e.clientX; lastY = e.clientY;
+          try {
+            // Capture the pointer so moves outside the element still target it
+            if (typeof videoContainer.setPointerCapture === 'function') {
+              videoContainer.setPointerCapture(e.pointerId);
+            }
+          } catch (_) {}
+          videoContainer.style.cursor = 'grabbing';
         }
       });
 
-      document.addEventListener("mousemove", (e) => {
+      document.addEventListener('pointermove', (e) => {
+        // Only handle mouse pointers here; touch/pinch handled in touch handlers
+        if (e.pointerType === 'touch') return;
         if (!isDragging) return;
-        const deltaX = (e.clientX - lastMouseX) / currentZoom;
-        const deltaY = (e.clientY - lastMouseY) / currentZoom;
-        translateX += deltaX;
-        translateY += deltaY;
-        lastMouseX = e.clientX;
-        lastMouseY = e.clientY;
+        const dx = (e.clientX - lastX);
+        const dy = (e.clientY - lastY);
+        translateX += dx; translateY += dy;
+        lastX = e.clientX; lastY = e.clientY;
         constrainBounds();
         updateTransform(false);
       });
 
-      document.addEventListener("mouseup", () => {
+      document.addEventListener('pointerup', (e) => {
+        if (e.pointerType === 'touch') return;
         isDragging = false;
-        videoContainer.style.cursor = currentZoom > 1 ? "grab" : "default";
+        try {
+          if (typeof videoContainer.releasePointerCapture === 'function') {
+            videoContainer.releasePointerCapture(e.pointerId);
+          }
+        } catch (_) {}
+        videoContainer.style.cursor = currentZoom > 1 ? 'grab' : 'default';
       });
 
-      zoomIn.addEventListener("click", () => {
-        if (currentZoom < MAX_ZOOM) {
+      // Mobile: pinch to zoom + one-finger pan
+      let pinchStartDist = 0; let pinchStartZoom = 1; let pinchCenter = {x:0,y:0};
+      let pinching = false; let lastPinchEnd = 0; let lastTap = 0;
+      const getDistance = (t1, t2) => Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      const getCenter = (t1, t2) => ({ x: (t1.clientX + t2.clientX)/2, y: (t1.clientY + t2.clientY)/2 });
+
+      videoContainer.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+          pinchStartDist = getDistance(e.touches[0], e.touches[1]);
+          pinchStartZoom = currentZoom;
+          pinchCenter = getCenter(e.touches[0], e.touches[1]);
+          pinching = true;
+          lastTap = 0; // prevent double-tap reset after pinch
+        } else if (e.touches.length === 1 && currentZoom > 1) {
+          isDragging = true;
+          lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+        }
+      }, { passive: true });
+
+      videoContainer.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 2) {
+          e.preventDefault();
+          const newDist = getDistance(e.touches[0], e.touches[1]);
+          const scale = newDist / (pinchStartDist || newDist);
+          const desired = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, pinchStartZoom * scale));
           const rect = videoContainer.getBoundingClientRect();
-          applyZoom(-1000, rect.left + rect.width / 2, rect.top + rect.height / 2);
+          const relX = (pinchCenter.x - rect.left) / rect.width;
+          const relY = (pinchCenter.y - rect.top) / rect.height;
+          const old = currentZoom; currentZoom = desired;
+          const ratio = currentZoom / old;
+          translateX = (translateX - relX * rect.width) * ratio + relX * rect.width;
+          translateY = (translateY - relY * rect.height) * ratio + relY * rect.height;
+          constrainBounds();
+          updateTransform(false);
+        } else if (e.touches.length === 1 && isDragging && currentZoom > 1) {
+          e.preventDefault();
+          const dx = (e.touches[0].clientX - lastX);
+          const dy = (e.touches[0].clientY - lastY);
+          translateX += dx; translateY += dy;
+          lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+          constrainBounds();
+          updateTransform(false);
+        }
+      }, { passive: false });
+
+      ['touchend','touchcancel'].forEach(evt => videoContainer.addEventListener(evt, (e) => {
+        if (pinching && e.touches.length < 2) {
+          pinching = false;
+          lastPinchEnd = Date.now();
+        }
+        isDragging = false;
+        videoContainer.style.cursor = currentZoom > 1 ? 'grab' : 'default';
+      }));
+
+      // Double-tap to reset on mobile
+      videoContainer.addEventListener('touchend', (e) => {
+        const now = Date.now();
+        // Ignore double-tap reset if a pinch just ended recently
+        if (now - lastPinchEnd < 500) { lastTap = 0; return; }
+        if (e.changedTouches && e.changedTouches.length === 1 && e.touches.length === 0 && !pinching) {
+          if (now - lastTap < 300) {
+            currentZoom = 1; translateX = 0; translateY = 0; updateTransform(true);
+            lastTap = 0;
+          } else {
+            lastTap = now;
+          }
         }
       });
-
-      zoomOut.addEventListener("click", () => {
-        if (currentZoom > MIN_ZOOM) {
-          const rect = videoContainer.getBoundingClientRect();
-          applyZoom(1000, rect.left + rect.width / 2, rect.top + rect.height / 2);
-        }
-      });
-
-      resetZoom.addEventListener("click", () => {
-        currentZoom = 1;
-        translateX = 0;
-        translateY = 0;
-        updateTransform(true);
-      });
-
-      controls.appendChild(zoomIn);
-      controls.appendChild(zoomOut);
-      controls.appendChild(resetZoom);
-      videoContainer.appendChild(controls);
     });
   }    // Ultra-optimized Professional VMS grid layout system for maximum screen utilization
   setGridColumns() {
@@ -309,6 +373,8 @@ class VideoloftPlayer {
       this.setupMobileLayout(grid, cameraCount, availableHeight);
       return;
     }
+
+    // No user layout preset (auto only)
     
     // Calculate optimal layout with advanced algorithms
     const layout = this.calculateOptimalLayoutForScreen(cameraCount, availableWidth, availableHeight);
@@ -448,6 +514,8 @@ class VideoloftPlayer {
     
     return bestConfig;
   }
+
+  // No user preference APIs (auto layout only)
   
   startStreams() {
     this.cleanup();
@@ -1107,17 +1175,10 @@ class VideoloftPlayer {
   setupDragAndDrop() {
     const grid = document.querySelector(".camera-grid");
     if (!grid || !window.Sortable) return;
-
-    // Disable drag-and-drop on mobile devices
-    if (window.innerWidth <= 768) {
-      grid.classList.remove('sortable-enabled');
-      return;
-    }
-
-    // Add sortable class for styling
+    const isMobile = window.innerWidth <= 768;
     grid.classList.add('sortable-enabled');
 
-    this.sortable = Sortable.create(grid, {
+    const sortableOptions = {
       animation: 200,
       ghostClass: 'sortable-ghost',
       chosenClass: 'sortable-chosen',
@@ -1126,6 +1187,13 @@ class VideoloftPlayer {
       fallbackClass: 'sortable-fallback',
       fallbackOnBody: true,
       swapThreshold: 0.8,
+      // Mobile-friendly long-press activation, doesn't block scrolling
+      delayOnTouchOnly: true,
+      delay: 800,
+      touchStartThreshold: 10,
+      // Don't start drag from the actual media surface to avoid pinch/pan conflicts
+      filter: 'video, img.thumbnail, .fullscreen-button',
+      preventOnFilter: true,
       onStart: (evt) => {
         // Pause all videos during drag
         this.pauseAllStreams();
@@ -1153,7 +1221,17 @@ class VideoloftPlayer {
           }, 500);
         }
       }
-    });
+    };
+
+    // Always use the drag handle on all devices for consistent UX
+    sortableOptions.handle = '.drag-handle';
+    if (isMobile) {
+      // On mobile, start dragging immediately when using the handle
+      sortableOptions.delayOnTouchOnly = false;
+      sortableOptions.delay = 0;
+    }
+
+    this.sortable = Sortable.create(grid, sortableOptions);
   }
 
   pauseAllStreams() {

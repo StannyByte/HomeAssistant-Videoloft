@@ -149,10 +149,39 @@
   font-weight: 600;
 }
 
+/* Active filter chips */
+.active-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(52, 202, 198, 0.1);
+  border: 1px solid var(--turquoise);
+  color: var(--turquoise);
+  font-size: var(--text-xs);
+}
+
+.chip .chip-close {
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 2px;
+}
+
 /* Enhanced Grid Layout */
 .search-results-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  /* Three columns on desktop for consistent tile layout */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-4);
   width: 100%;
   margin-top: var(--space-4);
@@ -225,6 +254,7 @@
   align-items: center;
   justify-content: center;
   opacity: 0;
+  transition: opacity var(--transition-base);
 }
 
 
@@ -301,10 +331,18 @@
   border: 1px solid var(--border-secondary);
   flex-grow: 1;
   min-height: 60px; /* Ensure minimum visibility */
-  
-  /* Allow full description to be visible */
-  display: block;
-  overflow: visible;
+  /* Clamp for cleaner cards */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Expand description on hover/focus for quick peek */
+.search-result-card:hover .result-description,
+.search-result-card:focus .result-description {
+  -webkit-line-clamp: unset;
+  max-height: none;
 }
 
 .result-actions {
@@ -329,10 +367,17 @@
 /* Loading Skeleton Styles */
 .search-results-skeleton {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  /* Mirror the three-column layout for loading state */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-4);
   width: 100%;
   margin-top: var(--space-4);
+}
+
+/* Reveal play overlay on hover/focus for better affordance */
+.search-result-card:hover .result-overlay,
+.search-result-card:focus .result-overlay {
+  opacity: 1;
 }
 
 .skeleton-card {
@@ -476,8 +521,9 @@
     justify-content: center;
   }
   
-  .search-results-grid {
-    grid-template-columns: 1fr;
+  .search-results-grid,
+  .search-results-skeleton {
+    grid-template-columns: 1fr; /* Single column on small screens */
     gap: var(--space-3);
   }
   
@@ -524,14 +570,12 @@
   }
 }
 
-@media (min-width: 1200px) {
-  .search-results-grid {
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+/* Two columns on medium screens */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .search-results-grid,
+  .search-results-skeleton {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (min-width: 1600px) {
-  .search-results-grid {
-    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-  }
-}
+/* Single column on small screens handled above */

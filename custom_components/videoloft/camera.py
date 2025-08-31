@@ -21,12 +21,12 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 from homeassistant.util import dt as dt_util
 
-from .api import VideoloftAPI
+from .helpers.api import VideoloftAPI
 from .const import (
     DOMAIN,
     ICON_CAMERA,
 )
-from .device_info import create_device_info, get_camera_capabilities, get_technical_specs
+from .helpers.device_info import create_device_info, get_camera_capabilities, get_technical_specs
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -359,7 +359,7 @@ class VideoloftCamera(Camera):
     async def _is_global_streaming_paused(self) -> bool:
         """Check if global streaming is paused."""
         try:
-            from .storage import GlobalStreamStateStore
+            from .helpers.storage import GlobalStreamStateStore
             state_store = GlobalStreamStateStore(self.hass)
             state = await state_store.async_load()
             return not state.get("enabled", True)

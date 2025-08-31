@@ -164,6 +164,31 @@
       });
     }
 
+    // In-card subtabs for LPR automation examples
+    try {
+      const container = document.getElementById('lprAutomationCard');
+      if (container) {
+        const buttons = container.querySelectorAll('.subtab-btn');
+        const panels = container.querySelectorAll('.subtab-content');
+        const activate = (targetSel) => {
+          buttons.forEach(b => b.classList.remove('active'));
+          panels.forEach(p => { p.classList.remove('active'); p.hidden = true; });
+          const target = container.querySelector(targetSel);
+          const btn = Array.from(buttons).find(b => b.getAttribute('data-target') === targetSel);
+          if (target) { target.hidden = false; target.classList.add('active'); }
+          if (btn) { btn.classList.add('active'); }
+        };
+        buttons.forEach(btn => {
+          btn.addEventListener('click', () => {
+            const targetSel = btn.getAttribute('data-target');
+            activate(targetSel);
+          });
+        });
+        // Ensure default shown
+        activate('#lprTabSimple');
+      }
+    } catch (e) { console.debug('Subtabs init failed', e); }
+
     // Fetch camera data with robust error handling
     const fetchCameraData = async (retryCount = 0) => {
       try {
@@ -208,23 +233,27 @@
     if (grid) {
       if (cameras.length > 0) {
         try {
-          new VideoloftPlayer(cameras);
+          const vp = new VideoloftPlayer(cameras);
+          window.videoPlayer = vp;
+          // No user-config toolbar; keep area clean
+          const controls = document.querySelector('.camera-controls');
+          if (controls) controls.innerHTML = '';
           showToast(`Successfully loaded ${cameras.length} camera${cameras.length > 1 ? 's' : ''}`, 'success');
         } catch (error) {
           console.error("Error initializing video player:", error);
           grid.innerHTML = `
-            <div class="error-message">
-              <i class="fas fa-exclamation-triangle"></i>
-              <h3>Video Player Error</h3>
-              <p>Failed to initialize video player: ${error.message}</p>
+            <div class="empty-state">
+              <div class="empty-state-icon"><i class="fas fa-exclamation-triangle"></i></div>
+              <div class="empty-state-title">Video Player Error</div>
+              <div class="empty-state-description">Failed to initialize video player: ${error.message}</div>
             </div>`;
         }
       } else {
         grid.innerHTML = `
-          <div class="error-message">
-            <i class="fas fa-camera-slash"></i>
-            <h3>No Cameras Found</h3>
-            <p>No cameras are currently available. Please check your Videoloft account configuration.</p>
+          <div class="empty-state">
+            <div class="empty-state-icon"><i class="fas fa-camera-slash"></i></div>
+            <div class="empty-state-title">No Cameras Found</div>
+            <div class="empty-state-description">No cameras are currently available. Please check your Videoloft account configuration.</div>
           </div>`;
       }
     }

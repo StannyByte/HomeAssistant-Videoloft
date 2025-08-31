@@ -170,6 +170,13 @@
   margin: 5px;
 }
 
+/* Toggle button state for toolbar */
+.btn-toggle.active {
+  border-color: var(--turquoise);
+  background: rgba(52, 202, 198, 0.1);
+  color: var(--text-primary);
+}
+
 /* Full width button utility */
 .btn-full-width {
   width: 100%;

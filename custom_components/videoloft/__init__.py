@@ -10,11 +10,11 @@ from homeassistant.components.http import StaticPathConfig
 from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
 
 from .const import DOMAIN, PLATFORMS
-from .api import VideoloftAPI, VideoloftApiClientError
+from .helpers.api import VideoloftAPI, VideoloftApiClientError
 from .camera import VideoloftCameraStreamView
-from .coordinator import VideoloftCoordinator
-from .status_coordinator import VideoloftStatusCoordinator
-from .views import (
+from .helpers.coordinator import VideoloftCoordinator
+from .helpers.status_coordinator import VideoloftStatusCoordinator
+from .helpers.views import (
     VideoloftCamerasView,
     VideoloftThumbnailView,
     VideoloftThumbnailStatsView,
@@ -313,13 +313,19 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
         except Exception as e:
             _LOGGER.warning("Error cleaning descriptions storage: %s", e)
         
-        # Remove Gemini API key storage
+        # Remove Gemini API key storage if this was the last entry
         try:
+            # Clean in-memory marker
             if "gemini_api_key" in hass.data.get(DOMAIN, {}):
                 hass.data[DOMAIN].pop("gemini_api_key", None)
-            _LOGGER.debug("Gemini API key removed from memory")
+            # If no more entries remain for this domain, clear persisted key
+            remaining = hass.config_entries.async_entries(DOMAIN)
+            if not remaining:
+                from .helpers.storage import ApiKeyStore
+                await ApiKeyStore(hass).async_clear_key()
+                _LOGGER.debug("Cleared persisted Gemini API key on final entry removal")
         except Exception as e:
-            _LOGGER.warning("Error removing Gemini API key: %s", e)
+            _LOGGER.warning("Error cleaning Gemini API key storage: %s", e)
             
         _LOGGER.info("Entry removal completed successfully for %s", entry.entry_id)
         

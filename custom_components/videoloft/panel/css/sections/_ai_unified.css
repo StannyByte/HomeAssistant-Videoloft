@@ -411,9 +411,9 @@
   background: transparent; /* Let background show through */
   margin-top: var(--space-4);
   width: 100%;
-  max-width: 680px; /* Match the form width */
-  margin-left: auto;
-  margin-right: auto;
+  max-width: none; /* Allow results to span full card width for multi-column grid */
+  margin-left: 0;
+  margin-right: 0;
 }
 
 /* Remove custom scrollbar since we're using natural flow now */

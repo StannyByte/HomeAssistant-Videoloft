@@ -39,6 +39,13 @@ class LPRManager {
           option.textContent = camera.name;
           this.cameraSelect.appendChild(option);
         });
+        // Restore last selected camera
+        const savedCam = localStorage.getItem('videoloft_lpr_camera');
+        if (savedCam) this.cameraSelect.value = savedCam;
+        // Persist selection on change
+        this.cameraSelect.addEventListener('change', () => {
+          localStorage.setItem('videoloft_lpr_camera', this.cameraSelect.value);
+        });
       }
     } catch (error) {
       console.error("Failed to populate camera selector:", error);
@@ -126,6 +133,13 @@ class LPRManager {
   }
   setupFormHandler() {
     if (!this.lprForm) return;
+    // Auto-uppercase license plate input
+    const plateInput = document.getElementById("licensePlate");
+    if (plateInput) {
+      plateInput.addEventListener('input', () => {
+        plateInput.value = plateInput.value.toUpperCase();
+      });
+    }
     this.lprForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -134,11 +148,11 @@ class LPRManager {
         license_plate: document.getElementById("licensePlate").value, // Use $ if available
       };
       if (!formData.uidd) {
-        alert("Please select a camera");
+        window.showWarning("Please select a camera");
         return;
       }
       if (!formData.license_plate) {
-        alert("License plate number is required");
+        window.showWarning("License plate number is required");
         return;
       }
       try {
@@ -193,23 +207,36 @@ class LPRManager {
       return camera ? camera.name : uidd;
     };
 
+    const countEl = document.getElementById('lprTriggerCount');
+    if (countEl) countEl.textContent = triggers?.length ? `(${triggers.length})` : '';
+    if (!triggers || triggers.length === 0) {
+      this.triggersList.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon"><i class="fas fa-list"></i></div>
+          <div class="empty-state-title">No Triggers Yet</div>
+          <div class="empty-state-description">Add your first license plate trigger to get started.</div>
+        </div>
+      `;
+      return;
+    }
+
     this.triggersList.innerHTML = triggers
       .map(
         (trigger, index) => `
-                <div class="trigger-item">
-                  <div class="trigger-info">
-                    <div class="trigger-details">
-                      <span class="trigger-plate">${trigger.license_plate.toUpperCase()}</span>
-                      <span class="trigger-camera"><i class="fas fa-camera"></i> ${getCameraName(trigger.uidd)}</span>
-                    </div>
-                  </div>
-                  <div class="trigger-actions">
-                    <button class="btn btn-primary" onclick="window.deleteLPRTrigger(${index})" aria-label="Delete trigger">
-                      <i class="fas fa-trash"></i>
-                    </button>
-                  </div>
-                </div>
-              `
+          <div class="trigger-item">
+            <div class="trigger-info">
+              <div class="trigger-details">
+                <span class="trigger-plate">${(trigger.license_plate || '').toString().toUpperCase()}</span>
+                <span class="trigger-camera"><i class="fas fa-camera"></i> ${getCameraName(trigger.uidd)}</span>
+              </div>
+            </div>
+            <div class="trigger-actions">
+              <button class="btn btn-primary" onclick="window.deleteLPRTrigger(${index})" aria-label="Delete trigger">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        `
       )
       .join("");
   }

@@ -25,7 +25,7 @@ from homeassistant.helpers.update_coordinator import (
 from homeassistant.helpers import storage
 from homeassistant.util import dt as dt_util
 
-from .api import VideoloftAPI
+from .helpers.api import VideoloftAPI
 from .const import (
     DOMAIN,
     ICON_CAMERA,

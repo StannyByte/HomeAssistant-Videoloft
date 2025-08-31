@@ -96,7 +96,7 @@
                         </form>
                     </div>
                     <div class="card">
-                        <h3><i class="fas fa-list"></i>Active Triggers</h3>
+                        <h3><i class="fas fa-list"></i>Active Triggers <span id="lprTriggerCount" class="badge-count" aria-live="polite"></span></h3>
                         <div id="lprTriggersList" class="triggers-container">
                             <div class="loading-container">
                                 <div class="spinner"></div>
@@ -116,12 +116,19 @@
                     </div>
                 </div>
 
-                <div class="card automation-examples-card">
+                <div class="card automation-examples-card" id="lprAutomationCard">
                     <h3><i class="fas fa-code"></i>Home Assistant Automation Examples</h3>
-                    <p>Integrate LPR events with Home Assistant notifications using these automation templates:</p>
+                    <p>Integrate LPR events with Home Assistant notifications using these templates. Pick a tab to view and copy:</p>
+
+                    <!-- Subtabs for examples -->
+                    <div class="subtabs" role="tablist" aria-label="LPR examples">
+                        <button class="subtab-btn active" data-target="#lprTabSimple" role="tab" aria-selected="true"><i class="fas fa-bell"></i> Simple</button>
+                        <button class="subtab-btn" data-target="#lprTabEnhanced" role="tab" aria-selected="false"><i class="fas fa-external-link-alt"></i> Enhanced</button>
+                        <button class="subtab-btn" data-target="#lprTabSetup" role="tab" aria-selected="false"><i class="fas fa-info-circle"></i> Setup</button>
+                    </div>
 
                     <!-- Basic LPR Notification -->
-                    <div class="automation-example">
+                    <div class="automation-example subtab-content active" id="lprTabSimple" role="tabpanel" aria-labelledby="Simple">
                         <h4><i class="fas fa-bell"></i>Simple LPR Notification</h4>
                         <p>Clean, simple notification when a license plate is detected:</p>
                         <div class="code-block-wrapper">
@@ -148,7 +155,7 @@ mode: single</pre>
                     </div>
 
                     <!-- Enhanced LPR Notification with Link -->
-                    <div class="automation-example">
+                    <div class="automation-example subtab-content" id="lprTabEnhanced" role="tabpanel" aria-labelledby="Enhanced" hidden>
                         <h4><i class="fas fa-external-link-alt"></i>Enhanced LPR Notification with Vehicle Info</h4>
                         <p>More detailed notification with vehicle details when available:</p>
                         <div class="code-block-wrapper">
@@ -186,7 +193,7 @@ mode: single</pre>
                     </div>
 
                     <!-- Setup Instructions -->
-                    <div class="automation-setup-notes">
+                    <div class="automation-setup-notes subtab-content" id="lprTabSetup" role="tabpanel" aria-labelledby="Setup" hidden>
                         <h4><i class="fas fa-info-circle"></i>Setup Instructions</h4>
                         <ul>
                             <li><strong>Device Name:</strong> Replace <code>your_device_name</code> with your actual
@@ -217,11 +224,12 @@ mode: single</pre>
                             <label for="geminiApiKey">API Key:</label>
                             <div class="input-group">
                                 <input type="password" id="geminiApiKey" name="geminiApiKey"
-                                    placeholder="Enter your Google Gemini API Key" />
+                                    placeholder="Enter your Google Gemini API Key" autocomplete="off" />
                                 <button type="button" id="saveApiKeyButton" class="btn btn-primary">
                                     <i class="fas fa-save"></i> Save Key
                                 </button>
                             </div>
+                            <small id="serverKeyStatus" class="form-text"></small>
                         </div>
 
                         <!-- Camera Selection -->
@@ -263,7 +271,7 @@ mode: single</pre>
                                         style="display:none;">
                                         <i class="fas fa-key"></i> Remove API Key
                                     </button>
-                                    <button id="cancelProcessing" class="btn btn-sm btn-secondary" style="display: none;">
+                                    <button type="button" id="cancelProcessing" class="btn btn-sm btn-secondary" style="display: none;">
                                         <i class="fas fa-stop"></i> Cancel
                                     </button>
                                 </div>
@@ -302,13 +310,19 @@ mode: single</pre>
                             </div>
                             <small class="form-text">Describe what you're looking for in the footage</small>
                         </div>
+                        <div id="srStatus" aria-live="polite" role="status" style="position: absolute; left: -9999px; height: 1px; width: 1px; overflow: hidden;">
+                          Ready
+                        </div>
                     </form>
 
                     <!-- Search Results -->
                     <div id="searchResults" class="search-results-container">
-                        <div class="no-results">
-                            <i class="fas fa-search"></i>
-                            <p>Enter your search criteria and click "Search" to find matching events</p>
+                        <div class="empty-state">
+                            <div class="empty-state-icon">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <div class="empty-state-title">Search Events</div>
+                            <div class="empty-state-description">Enter your search criteria and click "Search" to find matching events</div>
                         </div>
                     </div>
                 </div>

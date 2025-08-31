@@ -10,7 +10,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import EntityCategory
 
 from .const import DOMAIN
-from .device_info import create_device_info
+from .helpers.device_info import create_device_info
 
 _LOGGER = logging.getLogger(__name__)
 
